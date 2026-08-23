@@ -1,0 +1,72 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Vehicle {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  apiKeyHash      String
+  status          String   @default("pending") // pending | online | degraded | offline
+  currentRoute    String?
+  configProfileId String?
+  configProfile   ConfigProfile? @relation(fields: [configProfileId], references: [id])
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  telemetry       TelemetryReading[]
+  statusEvents    StatusEvent[]
+  alerts          Alert[]
+}
+
+model TelemetryReading {
+  id          String   @id @default(uuid())
+  vehicleId   String
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+  timestamp   DateTime @default(now())
+  temperature Float
+  latitude    Float
+  longitude   Float
+  doorOpen    Boolean  @default(false)
+}
+
+model ConfigProfile {
+  id                     String   @id @default(uuid())
+  name                   String
+  tempMin                Float
+  tempMax                Float
+  heartbeatIntervalSecs  Int      @default(30)
+  vehicles               Vehicle[]
+}
+
+model StatusEvent {
+  id         String   @id @default(uuid())
+  vehicleId  String
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+  fromStatus String
+  toStatus   String
+  reason     String
+  timestamp  DateTime @default(now())
+}
+
+model Alert {
+  id             String   @id @default(uuid())
+  vehicleId      String
+  vehicle        Vehicle  @relation(fields: [vehicleId], references: [id])
+  severity       String   // info | warning | critical
+  type           String   // status_change | temperature_excursion | connectivity_loss
+  message        String
+  acknowledged   Boolean  @default(false)
+  acknowledgedAt DateTime?
+  acknowledgedBy String?
+  createdAt      DateTime @default(now())
+}
+
+model AdminUser {
+  id           String @id @default(uuid())
+  email        String @unique
+  passwordHash String
+  role         String @default("admin")
+}

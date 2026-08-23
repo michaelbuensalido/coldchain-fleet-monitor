@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Colors */
+  --color-bg-base: #0b0f17;
+  --color-surface-panel: rgba(18, 27, 42, 0.85);
+  --color-border-quiet: #1e293b;
+  --color-text-dim: #64748b;
+  --color-text-main: #f1f5f9;
+  
+  --color-status-online: #10b981;
+  --color-status-degraded: #f59e0b;
+  --color-status-offline: #ef4444;
+
+  /* Typography */
+  --font-primary: 'Outfit', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-primary);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-main);
+  overflow: hidden;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Custom Webkit scrollbar for panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-quiet);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-dim);
+}
+
+/* Custom leaflet styles to blend with dark mode */
+.leaflet-container {
+  background: var(--color-bg-base) !important;
+  font-family: var(--font-primary) !important;
+}
+
+/* Accessible focus outline */
+button:focus-visible, 
+input:focus-visible, 
+select:focus-visible {
+  outline: 2px solid var(--color-text-main);
+  outline-offset: 2px;
+}
