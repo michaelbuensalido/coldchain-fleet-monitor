@@ -1,7 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Vehicle {
   id: string;
@@ -11,94 +19,87 @@ interface Vehicle {
   longitude?: number;
 }
 
+interface TelemetrySnapshot {
+  vehicleId: string;
+  temperature?: number;
+  timestamp?: string;
+}
+
 interface FleetMapProps {
   vehicles: Vehicle[];
   selectedVehicleId?: string | null;
   onVehicleSelect?: (vehicleId: string) => void;
+  onVehicleDeselect?: () => void;
+  /** Live telemetry keyed by vehicleId — used to populate popup readings */
+  telemetryMap?: Record<string, TelemetrySnapshot>;
 }
 
-function MapController({ selectedVehicle, vehicles }: { selectedVehicle: Vehicle | null; vehicles: Vehicle[] }) {
-  const map = useMap();
+// ─── SVG Marker Icon ──────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (selectedVehicle && selectedVehicle.latitude !== undefined && selectedVehicle.longitude !== undefined) {
-      map.flyTo([selectedVehicle.latitude, selectedVehicle.longitude], 13, {
-        duration: 1.2,
-      });
-    } else if (vehicles.length > 0) {
-      const bounds = L.latLngBounds(
-        vehicles
-          .filter((v) => v.latitude !== undefined && v.longitude !== undefined)
-          .map((v) => [v.latitude!, v.longitude!])
-      );
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [80, 80] });
-      }
-    }
-  }, [map, selectedVehicle, vehicles]);
-
-  return null;
-}
+const STATUS_COLORS: Record<string, string> = {
+  online: "#10b981",
+  degraded: "#f59e0b",
+  offline: "#ef4444",
+  pending: "#94a3b8",
+};
 
 const createCustomIcon = (status: string, isSelected: boolean) => {
-  const colors = {
-    online: '#10b981',
-    degraded: '#f59e0b',
-    offline: '#ef4444',
-    pending: '#94a3b8',
-  };
-  const color = colors[status as keyof typeof colors] || colors.pending;
-  
-  const ringSize = isSelected ? 44 : 28;
-  const centerSize = isSelected ? 12 : 8;
+  const color = STATUS_COLORS[status] ?? STATUS_COLORS.pending;
+
+  const ringSize = isSelected ? 48 : 28;
+  const centerSize = isSelected ? 14 : 8;
   const borderSize = isSelected ? 4 : 3;
 
   const svgIcon = `
     <svg width="${ringSize}" height="${ringSize}" viewBox="0 0 ${ringSize} ${ringSize}" xmlns="http://www.w3.org/2000/svg" style="overflow: visible;">
       <defs>
-        <filter id="glow-${status}" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="${color}" flood-opacity="0.6" />
+        <filter id="glow-${status}-${isSelected ? "sel" : "unsel"}" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="0" stdDeviation="${isSelected ? 5 : 3}" flood-color="${color}" flood-opacity="${isSelected ? 0.9 : 0.6}" />
         </filter>
       </defs>
-      ${isSelected ? `
-        <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${ringSize / 2 - 2}" fill="none" stroke="${color}" stroke-width="2" opacity="0.4">
+      ${
+        isSelected
+          ? `
+        <!-- Outer pulsing ring -->
+        <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${ringSize / 2 - 2}" fill="none" stroke="${color}" stroke-width="2" opacity="0.35">
           <animate attributeName="r" values="${ringSize / 3};${ringSize / 2 - 2}" dur="1.8s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="0.8;0" dur="1.8s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.7;0" dur="1.8s" repeatCount="indefinite"/>
         </circle>
-        <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${ringSize / 2.5}" fill="none" stroke="${color}" stroke-width="1" opacity="0.6">
+        <!-- Inner pulsing ring -->
+        <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${ringSize / 2.5}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.5">
           <animate attributeName="r" values="${ringSize / 4};${ringSize / 2.5}" dur="1.8s" begin="0.6s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="0.8;0" dur="1.8s" begin="0.6s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.7;0" dur="1.8s" begin="0.6s" repeatCount="indefinite"/>
         </circle>
-      ` : ''}
-      <!-- Outer Base Ring -->
-      <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${(centerSize + borderSize * 2) / 2}" fill="#0b0f17" stroke="${color}" stroke-width="${borderSize}" filter="url(#glow-${status})" />
-      <!-- Inner Solid Dot -->
-      <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${centerSize / 2}" fill="${color}" />
+        <!-- Static halo ring -->
+        <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${(centerSize + borderSize * 2) / 2 + 5}" fill="none" stroke="${color}" stroke-width="1" opacity="0.25"/>
+      `
+          : ""
+      }
+      <!-- Outer base ring -->
+      <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${(centerSize + borderSize * 2) / 2}" fill="#0b0f17" stroke="${color}" stroke-width="${borderSize}" filter="url(#glow-${status}-${isSelected ? "sel" : "unsel"})"/>
+      <!-- Inner solid dot -->
+      <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${centerSize / 2}" fill="${color}"/>
     </svg>
   `;
 
   return L.divIcon({
     html: svgIcon,
-    className: 'custom-marker-container',
+    className: "custom-marker-container",
     iconSize: [ringSize, ringSize],
     iconAnchor: [ringSize / 2, ringSize / 2],
   });
 };
 
-// Implement coordinate jitter/offset calculation to prevent overlapping markers from hiding each other
+// ─── Jitter offset to separate stacked markers ────────────────────────────────
+
 const applyJitterOffset = (vehicles: Vehicle[]): Vehicle[] => {
   const coordCount: Record<string, number> = {};
-  
   return vehicles.map((v) => {
     if (v.latitude === undefined || v.longitude === undefined) return v;
-    
-    // Group by coordinates rounded to 5 decimal places (~1m resolution)
     const key = `${v.latitude.toFixed(5)},${v.longitude.toFixed(5)}`;
     const count = coordCount[key] || 0;
     coordCount[key] = count + 1;
-    
     if (count > 0) {
-      // Shift overlapping markers slightly in a radial spiral pattern (approx 15-20 meters away)
       const angle = (count * 2 * Math.PI) / 6;
       const radius = 0.00018 * Math.ceil(count / 6);
       return {
@@ -107,78 +108,563 @@ const applyJitterOffset = (vehicles: Vehicle[]): Vehicle[] => {
         longitude: v.longitude + Math.cos(angle) * radius,
       };
     }
-    
     return v;
   });
 };
 
-export default function FleetMap({ vehicles, selectedVehicleId, onVehicleSelect }: FleetMapProps) {
+// ─── MapController — handles fly-to on sidebar-driven selection ───────────────
+
+function MapController({
+  selectedVehicle,
+  vehicles,
+  suppressNextFly,
+}: {
+  selectedVehicle: Vehicle | null;
+  vehicles: Vehicle[];
+  suppressNextFly: React.MutableRefObject<boolean>;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (
+      selectedVehicle &&
+      selectedVehicle.latitude !== undefined &&
+      selectedVehicle.longitude !== undefined
+    ) {
+      if (suppressNextFly.current) {
+        suppressNextFly.current = false;
+        return;
+      }
+      map.flyTo([selectedVehicle.latitude, selectedVehicle.longitude], 13, {
+        duration: 1.2,
+      });
+    } else if (!selectedVehicle && vehicles.length > 0) {
+      const bounds = L.latLngBounds(
+        vehicles
+          .filter((v) => v.latitude !== undefined && v.longitude !== undefined)
+          .map((v) => [v.latitude!, v.longitude!]),
+      );
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [80, 80] });
+      }
+    }
+  }, [map, selectedVehicle, vehicles, suppressNextFly]);
+
+  return null;
+}
+
+// ─── MapClickCapture — closes popup when clicking empty map space ─────────────
+
+function MapClickCapture({ onMapClick }: { onMapClick: () => void }) {
+  useMapEvents({ click: onMapClick });
+  return null;
+}
+
+// ─── PixelPositionTracker — converts a lat/lng to container px and calls back ─
+
+function PixelPositionTracker({
+  lat,
+  lng,
+  onPosition,
+}: {
+  lat: number;
+  lng: number;
+  onPosition: (pos: { x: number; y: number } | null) => void;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    const update = () => {
+      const point = map.latLngToContainerPoint([lat, lng]);
+      onPosition({ x: point.x, y: point.y });
+    };
+    update();
+    map.on("move zoom viewreset", update);
+    return () => {
+      map.off("move zoom viewreset", update);
+      onPosition(null);
+    };
+  }, [map, lat, lng, onPosition]);
+
+  return null;
+}
+
+// ─── Inline status badge (no Tailwind — inline styles to keep out of Leaflet DOM) ──
+
+const STATUS_LABEL: Record<string, string> = {
+  online: "Online",
+  degraded: "Degraded",
+  offline: "Offline",
+  pending: "Pending",
+};
+
+function InlineStatusBadge({ status }: { status: string }) {
+  const color = STATUS_COLORS[status] ?? STATUS_COLORS.pending;
+  const label = STATUS_LABEL[status] ?? status;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        padding: "2px 8px",
+        borderRadius: 9999,
+        border: `1px solid ${color}33`,
+        background: `${color}1a`,
+        color,
+        fontSize: 10,
+        fontFamily: "var(--font-mono)",
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
+      }}
+    >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: color,
+          boxShadow: `0 0 6px ${color}`,
+          display: "inline-block",
+          flexShrink: 0,
+        }}
+      />
+      {label}
+    </span>
+  );
+}
+
+// ─── Popup card (rendered outside MapContainer to avoid overflow:hidden clipping) ──
+
+interface PopupOverlayProps {
+  vehicle: Vehicle;
+  telemetry?: TelemetrySnapshot;
+  /** Container-relative pixel position of the marker */
+  pixelPos: { x: number; y: number };
+  onClose: () => void;
+}
+
+const POPUP_WIDTH = 224;
+const POPUP_ARROW_OFFSET = 20; // px above marker centre
+
+function PopupOverlay({ vehicle, telemetry, pixelPos, onClose }: PopupOverlayProps) {
+  const color = STATUS_COLORS[vehicle.status] ?? STATUS_COLORS.pending;
+  const hasTemp = telemetry?.temperature !== undefined;
+
+  const tempColor =
+    vehicle.status === "degraded"
+      ? "#f59e0b"
+      : vehicle.status === "offline"
+        ? "#ef4444"
+        : "#10b981";
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        // Centre popup horizontally over marker, place above it
+        left: pixelPos.x - POPUP_WIDTH / 2,
+        top: pixelPos.y - POPUP_ARROW_OFFSET,
+        transform: "translateY(-100%)",
+        width: POPUP_WIDTH,
+        zIndex: 2000,
+        pointerEvents: "auto",
+        // Animate in
+        animation: "popup-appear 0.15s ease-out",
+      }}
+    >
+      {/* Caret pointing down toward marker */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: -7,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 0,
+          height: 0,
+          borderLeft: "7px solid transparent",
+          borderRight: "7px solid transparent",
+          borderTop: "7px solid #1e293b",
+          zIndex: 1,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: -5,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 0,
+          height: 0,
+          borderLeft: "6px solid transparent",
+          borderRight: "6px solid transparent",
+          borderTop: "6px solid rgba(18,27,42,0.97)",
+          zIndex: 2,
+        }}
+      />
+
+      {/* Card */}
+      <div
+        style={{
+          background: "rgba(18, 27, 42, 0.97)",
+          border: `1px solid #1e293b`,
+          borderRadius: 14,
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          boxShadow: `0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px ${color}22`,
+          overflow: "hidden",
+        }}
+      >
+        {/* Status-colour accent stripe at top */}
+        <div
+          style={{
+            height: 2,
+            background: `linear-gradient(90deg, ${color} 0%, ${color}55 70%, transparent 100%)`,
+          }}
+        />
+
+        <div style={{ padding: "10px 12px 12px" }}>
+          {/* Vehicle name + status badge + close button */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 8,
+              marginBottom: 8,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "var(--font-primary)",
+                fontWeight: 600,
+                fontSize: 13,
+                color: "#f1f5f9",
+                lineHeight: 1.3,
+                wordBreak: "break-word",
+                flex: 1,
+              }}
+            >
+              {vehicle.name}
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+              <InlineStatusBadge status={vehicle.status} />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose();
+                }}
+                aria-label="Close popup"
+                style={{
+                  background: "rgba(100,116,139,0.15)",
+                  border: "1px solid rgba(100,116,139,0.2)",
+                  color: "#64748b",
+                  cursor: "pointer",
+                  width: 20,
+                  height: 20,
+                  borderRadius: 6,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 13,
+                  lineHeight: 1,
+                  flexShrink: 0,
+                  padding: 0,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+
+          {/* Temperature readout */}
+          <div
+            style={{
+              background: "rgba(11,15,23,0.8)",
+              borderRadius: 8,
+              padding: "8px 10px",
+              marginBottom: hasTemp && telemetry?.timestamp ? 8 : 0,
+              border: "1px solid rgba(30,41,59,0.8)",
+              display: "flex",
+              alignItems: "baseline",
+              gap: 3,
+            }}
+          >
+            {hasTemp ? (
+              <>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 24,
+                    fontWeight: 700,
+                    color: tempColor,
+                    lineHeight: 1,
+                  }}
+                >
+                  {telemetry!.temperature!.toFixed(1)}
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 13,
+                    color: "#475569",
+                    alignSelf: "flex-end",
+                    paddingBottom: 1,
+                  }}
+                >
+                  °C
+                </span>
+              </>
+            ) : (
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  color: "#475569",
+                  fontStyle: "italic",
+                }}
+              >
+                No reading yet
+              </span>
+            )}
+          </div>
+
+          {/* Last updated timestamp */}
+          {telemetry?.timestamp && (
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                color: "#334155",
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <span style={{ color: "#475569", fontSize: 11 }}>↻</span>
+              {new Date(telemetry.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Inner map layer (must be a child of MapContainer to access useMap) ───────
+
+interface MapInnerProps {
+  vehicles: Vehicle[];
+  selectedVehicleId?: string | null;
+  onVehicleSelect?: (vehicleId: string) => void;
+  onVehicleDeselect?: () => void;
+  suppressNextFly: React.MutableRefObject<boolean>;
+  // Popup state is lifted to FleetMap so the overlay renders outside MapContainer
+  popupVehicleId: string | null;
+  onPopupOpen: (vehicleId: string) => void;
+  onPopupClose: () => void;
+  onPopupPosition: (pos: { x: number; y: number } | null) => void;
+}
+
+function MapInner({
+  vehicles,
+  selectedVehicleId,
+  onVehicleSelect,
+  onVehicleDeselect,
+  suppressNextFly,
+  popupVehicleId,
+  onPopupOpen,
+  onPopupClose,
+  onPopupPosition,
+}: MapInnerProps) {
+  const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
+  const popupVehicle = vehicles.find((v) => v.id === popupVehicleId);
+
+  const handleMapClick = useCallback(() => {
+    onPopupClose();
+    onVehicleDeselect?.();
+  }, [onPopupClose, onVehicleDeselect]);
+
+  const handleMarkerClick = useCallback(
+    (vehicle: Vehicle) => {
+      if (popupVehicleId === vehicle.id) {
+        // Toggle off same marker
+        onPopupClose();
+        onVehicleDeselect?.();
+      } else {
+        // Suppress fly-to since the user clicked directly on the marker (already visible)
+        suppressNextFly.current = true;
+        onPopupOpen(vehicle.id);
+        onVehicleSelect?.(vehicle.id);
+      }
+    },
+    [popupVehicleId, onPopupOpen, onPopupClose, onVehicleSelect, onVehicleDeselect, suppressNextFly],
+  );
+
+  return (
+    <>
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      />
+      <MapController
+        selectedVehicle={selectedVehicle ?? null}
+        vehicles={vehicles}
+        suppressNextFly={suppressNextFly}
+      />
+      <MapClickCapture onMapClick={handleMapClick} />
+
+      {/* Track popup vehicle's pixel position and report it upward */}
+      {popupVehicle?.latitude !== undefined && popupVehicle?.longitude !== undefined && (
+        <PixelPositionTracker
+          lat={popupVehicle.latitude}
+          lng={popupVehicle.longitude}
+          onPosition={onPopupPosition}
+        />
+      )}
+
+      {vehicles.map((vehicle) => (
+        <Marker
+          key={vehicle.id}
+          position={[vehicle.latitude!, vehicle.longitude!]}
+          icon={createCustomIcon(vehicle.status, vehicle.id === selectedVehicleId)}
+          opacity={vehicle.status === "offline" ? 0.75 : 1.0}
+          zIndexOffset={vehicle.id === selectedVehicleId ? 1000 : 0}
+          eventHandlers={{
+            click: (e) => {
+              L.DomEvent.stopPropagation(e);
+              handleMarkerClick(vehicle);
+            },
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+// ─── Main exported component ──────────────────────────────────────────────────
+
+export default function FleetMap({
+  vehicles,
+  selectedVehicleId,
+  onVehicleSelect,
+  onVehicleDeselect,
+  telemetryMap,
+}: FleetMapProps) {
   const center: [number, number] = [47.6062, -122.3321];
   const [mapReady, setMapReady] = useState(false);
 
-  // Delay Leaflet until after StrictMode's first unmount so markers are not doubled
+  // Ref to suppress fly-to when selection originates from a map click
+  const suppressNextFly = useRef(false);
+
+  // Popup state lives here (outside MapContainer) so the overlay can be rendered
+  // in the outer relative div — MapContainer has overflow:hidden which would clip it.
+  const [popupVehicleId, setPopupVehicleId] = useState<string | null>(null);
+  const [popupPixelPos, setPopupPixelPos] = useState<{ x: number; y: number } | null>(null);
+
+  // Sync popup with external selection changes (sidebar click)
+  const prevSelectedRef = useRef<string | null | undefined>(selectedVehicleId);
+  useEffect(() => {
+    if (selectedVehicleId !== prevSelectedRef.current) {
+      prevSelectedRef.current = selectedVehicleId;
+      if (selectedVehicleId) {
+        setPopupVehicleId(selectedVehicleId);
+      } else {
+        setPopupVehicleId(null);
+        setPopupPixelPos(null);
+      }
+    }
+  }, [selectedVehicleId]);
+
+  const handlePopupOpen = useCallback((vehicleId: string) => {
+    setPopupVehicleId(vehicleId);
+  }, []);
+
+  const handlePopupClose = useCallback(() => {
+    setPopupVehicleId(null);
+    setPopupPixelPos(null);
+  }, []);
+
   useEffect(() => {
     setMapReady(true);
   }, []);
 
   const vehiclesWithLocation = useMemo(() => {
-    const unique = vehicles.filter((v, index, list) => list.findIndex((item) => item.id === v.id) === index);
+    const unique = vehicles.filter(
+      (v, index, list) => list.findIndex((item) => item.id === v.id) === index,
+    );
     return applyJitterOffset(unique).filter(
-      (v) => v.latitude !== undefined && v.longitude !== undefined
+      (v) => v.latitude !== undefined && v.longitude !== undefined,
     );
   }, [vehicles]);
 
-  const selectedVehicle = vehiclesWithLocation.find((v) => v.id === selectedVehicleId);
+  const popupVehicle = vehiclesWithLocation.find((v) => v.id === popupVehicleId);
 
   return (
     <div className="relative w-full h-full">
       {mapReady && (
-      <MapContainer
-        center={center}
-        zoom={10}
-        zoomControl={false} // Disable default zoom controls to keep interface clean
-        style={{ height: '100vh', width: '100%', zIndex: 0 }}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
-        <MapController selectedVehicle={selectedVehicle || null} vehicles={vehiclesWithLocation} />
-        {vehiclesWithLocation.map((vehicle) => (
-          <Marker
-            key={vehicle.id}
-            position={[vehicle.latitude!, vehicle.longitude!]}
-            icon={createCustomIcon(vehicle.status, vehicle.id === selectedVehicleId)}
-            opacity={vehicle.status === 'offline' ? 0.75 : 1.0} // Subtly reduce opacity of offline/stale markers
-            eventHandlers={{
-              click: () => onVehicleSelect?.(vehicle.id),
-            }}
+        <MapContainer
+          center={center}
+          zoom={10}
+          zoomControl={false}
+          style={{ height: "100vh", width: "100%", zIndex: 0 }}
+        >
+          <MapInner
+            vehicles={vehiclesWithLocation}
+            selectedVehicleId={selectedVehicleId}
+            onVehicleSelect={onVehicleSelect}
+            onVehicleDeselect={onVehicleDeselect}
+            suppressNextFly={suppressNextFly}
+            popupVehicleId={popupVehicleId}
+            onPopupOpen={handlePopupOpen}
+            onPopupClose={handlePopupClose}
+            onPopupPosition={setPopupPixelPos}
           />
-        ))}
-      </MapContainer>
+        </MapContainer>
       )}
 
-      {/* Floating Status Legend */}
-      <div className="absolute bottom-6 left-6 z-[1000] bg-[var(--color-surface-panel)] border border-[var(--color-border-quiet)] backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl flex flex-col gap-2 pointer-events-auto">
-        <div className="text-[10px] text-slate-400 font-bold tracking-wider uppercase font-mono mb-0.5">Fleet Status Legend</div>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-200">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#10b981] shadow-[0_0_8px_#10b981]" />
-            <span>ONLINE</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-200">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] shadow-[0_0_8px_#f59e0b]" />
-            <span>DEGRADED</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-200 flex-row">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] shadow-[0_0_8px_#ef4444] opacity-75" />
-            <span className="opacity-75">OFFLINE (STALE POS)</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-200 flex-row">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#94a3b8] shadow-[0_0_8px_rgba(148,163,184,0.5)]" />
-            <span>PENDING (AWAITING CHECK-IN)</span>
-          </div>
+      {/* Popup overlay rendered OUTSIDE MapContainer to avoid overflow:hidden clipping */}
+      {popupVehicle && popupPixelPos && (
+        <PopupOverlay
+          vehicle={popupVehicle}
+          telemetry={telemetryMap?.[popupVehicle.id]}
+          pixelPos={popupPixelPos}
+          onClose={() => {
+            handlePopupClose();
+            onVehicleDeselect?.();
+          }}
+        />
+      )}
+
+      {/* Floating Status Legend — bottom-right, compact, matches sidebar dark theme */}
+      <div className="absolute bottom-6 right-6 z-[1000] bg-[var(--color-surface-panel)] border border-[var(--color-border-quiet)] backdrop-blur-md px-3.5 py-2.5 rounded-xl shadow-2xl flex flex-col gap-1.5 pointer-events-auto">
+        <div className="text-[9px] text-slate-500 font-bold tracking-widest uppercase font-mono mb-0.5">
+          Status
         </div>
+        {[
+          { color: "#10b981", glow: "#10b981", label: "Online", opacity: "1" },
+          { color: "#f59e0b", glow: "#f59e0b", label: "Degraded", opacity: "1" },
+          { color: "#ef4444", glow: "#ef4444", label: "Offline", opacity: "0.75" },
+          { color: "#94a3b8", glow: "rgba(148,163,184,0.5)", label: "Pending", opacity: "1" },
+        ].map(({ color, glow, label, opacity }) => (
+          <div key={label} className="flex items-center gap-2">
+            <span
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: color, boxShadow: `0 0 6px ${glow}`, opacity }}
+            />
+            <span
+              className="text-[11px] font-mono"
+              style={{ color: `color-mix(in srgb, ${color} 80%, white)`, opacity }}
+            >
+              {label}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );

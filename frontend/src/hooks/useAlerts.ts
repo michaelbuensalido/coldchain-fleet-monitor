@@ -12,6 +12,9 @@ interface Alert {
   acknowledged: boolean;
   acknowledgedAt: string | null;
   acknowledgedBy: string | null;
+  durationSeconds: number | null;
+  recoveredAt: string | null;
+  minor: boolean;
   createdAt: string;
 }
 
@@ -79,16 +82,10 @@ export function useAcknowledgeAlert() {
 
   return useMutation({
     mutationFn: (alertId: string) => acknowledgeAlert(token, alertId, 'admin'),
-    onMutate: async (alertId) => {
+    onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['alerts'] });
       const previous = queryClient.getQueryData<Alert[]>(['alerts']);
       const previousUnacked = queryClient.getQueryData<Alert[]>(['alerts', 'unacknowledged']);
-      queryClient.setQueryData<Alert[]>(['alerts'], (current) =>
-        (current || []).map((alert) => (alert.id === alertId ? markAcknowledged(alert) : alert)),
-      );
-      queryClient.setQueryData<Alert[]>(['alerts', 'unacknowledged'], (current) =>
-        (current || []).filter((alert) => alert.id !== alertId),
-      );
       return { previous, previousUnacked };
     },
     onError: (_err, _alertId, context) => {
@@ -104,6 +101,15 @@ export function useAcknowledgeAlert() {
       queryClient.invalidateQueries({ queryKey: ['alerts', 'unacknowledged'] });
     },
   });
+}
+
+export function formatDuration(seconds: number | null): string {
+  if (seconds === null) return 'N/A';
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  return `${hours}h ${mins}m`;
 }
 
 async function acknowledgeAllAlerts(token: string, acknowledgedBy: string): Promise<void> {

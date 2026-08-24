@@ -95,6 +95,8 @@ export class HealthSweepService implements OnModuleInit, OnModuleDestroy {
           let reason = 'Normal telemetry check-in';
           let alertSeverity: 'info' | 'warning' | 'critical' = 'info';
           let alertType: 'status_change' | 'temperature_excursion' | 'connectivity_loss' = 'status_change';
+          let durationSeconds: number | undefined = undefined;
+          let isMinor = false;
 
           if (nextState === 'degraded') {
             if (lastSeenDiffMs > heartbeatIntervalMs) {
@@ -110,56 +112,112 @@ export class HealthSweepService implements OnModuleInit, OnModuleDestroy {
             reason = `No heartbeat detected. Last seen ${lastSeenVal > 0 ? Math.round(lastSeenDiffMs / 1000) + 's ago' : 'never'}.`;
             alertSeverity = 'critical';
             alertType = 'connectivity_loss';
+
+            // If transitioning from degraded to offline, clear the degraded alert
+            // since offline is a more severe state
+            if (vehicle.status === 'degraded') {
+              await this.alerts.clearAlertsByType(vehicle.id, 'degraded');
+            }
           } else if (nextState === 'online') {
             reason = 'Telemetry recovered within safe bounds';
+
+            // Calculate duration if recovering from degraded
+            if (vehicle.status === 'degraded') {
+              const degradedEvent = await this.prisma.statusEvent.findFirst({
+                where: {
+                  vehicleId: vehicle.id,
+                  toStatus: 'degraded',
+                },
+                orderBy: { timestamp: 'desc' },
+              });
+
+              if (degradedEvent) {
+                durationSeconds = Math.floor(
+                  (Date.now() - degradedEvent.timestamp.getTime()) / 1000,
+                );
+
+                // Auto-acknowledge short degraded periods (< 60s)
+                if (durationSeconds < 60) {
+                  isMinor = true;
+                }
+              }
+            }
+
+            // Also calculate duration if recovering from offline
+            if (vehicle.status === 'offline') {
+              const offlineEvent = await this.prisma.statusEvent.findFirst({
+                where: {
+                  vehicleId: vehicle.id,
+                  toStatus: 'offline',
+                },
+                orderBy: { timestamp: 'desc' },
+              });
+
+              if (offlineEvent) {
+                durationSeconds = Math.floor(
+                  (Date.now() - offlineEvent.timestamp.getTime()) / 1000,
+                );
+              }
+            }
           }
 
-          await this.prisma.$transaction([
-            this.prisma.statusEvent.create({
-              data: {
-                vehicleId: vehicle.id,
-                fromStatus: vehicle.status,
-                toStatus: nextState,
-                reason,
-              },
-            }),
-            this.prisma.vehicle.update({
-              where: { id: vehicle.id },
-              data: { status: nextState },
-            }),
-          ]);
+          const statusEvent = await this.prisma.statusEvent.create({
+            data: {
+              vehicleId: vehicle.id,
+              fromStatus: vehicle.status,
+              toStatus: nextState,
+              reason,
+              durationSeconds,
+              minor: isMinor,
+              acknowledged: isMinor, // Auto-acknowledge minor events
+              acknowledgedAt: isMinor ? new Date() : null,
+              acknowledgedBy: isMinor ? 'system' : null,
+            },
+          });
+
+          await this.prisma.vehicle.update({
+            where: { id: vehicle.id },
+            data: { status: nextState },
+          });
 
           if (nextState !== 'online') {
+            // Clear any existing unresolved alerts for this vehicle before creating new one
+            await this.alerts.clearUnresolvedAlerts(vehicle.id);
+
             await this.alerts.createAlert(
               vehicle.id,
               alertSeverity,
               alertType,
               `${vehicle.name} status changed from ${vehicle.status} to ${nextState}: ${reason}`,
+              statusEvent.id,
+            );
+          } else if (durationSeconds !== undefined && durationSeconds > 0) {
+            // Update any open alerts with recovery info
+            await this.alerts.markAlertsRecovered(
+              vehicle.id,
+              new Date(),
+              durationSeconds,
+              isMinor,
             );
           }
 
-          await redisClient.publish('vehicle:status', JSON.stringify({
-            vehicleId: vehicle.id,
-            name: vehicle.name,
-            fromStatus: vehicle.status,
-            toStatus: nextState,
-            reason,
-            timestamp: new Date().toISOString(),
-          }));
-        }
-
-        // Clear leftover banner items once the truck is healthy again —
-        // including first check-in status_change rows and missed recoveries.
-        if (nextState === 'online') {
-          await this.alerts.resolveOpenAlerts(vehicle.id, [
-            'status_change',
-            'temperature_excursion',
-            'connectivity_loss',
-          ]);
+          await redisClient.publish(
+            'vehicle:status',
+            JSON.stringify({
+              vehicleId: vehicle.id,
+              name: vehicle.name,
+              fromStatus: vehicle.status,
+              toStatus: nextState,
+              reason,
+              durationSeconds,
+              minor: isMinor,
+              timestamp: new Date().toISOString(),
+            }),
+          );
         }
       }
     } catch (err: any) {
-      console.error('[Health Sweep] Sweep error:', err.message);
+      console.error('[Health Sweep] Sweep error:', err?.message || 'Unknown error');
     }
   }
 }

@@ -81,11 +81,20 @@ export class VehiclesService {
   }
 
   async deleteVehicle(id: string) {
-    // Delete related telemetry readings and status events first
+    // Delete related telemetry readings, status events, and alerts first
     await this.prisma.telemetryReading.deleteMany({ where: { vehicleId: id } });
+    await this.prisma.alert.deleteMany({ where: { vehicleId: id } });
     await this.prisma.statusEvent.deleteMany({ where: { vehicleId: id } });
     return this.prisma.vehicle.delete({
       where: { id },
+    });
+  }
+
+  async getStatusEvents(vehicleId: string) {
+    return this.prisma.statusEvent.findMany({
+      where: { vehicleId },
+      orderBy: { timestamp: 'desc' },
+      take: 50,
     });
   }
 }

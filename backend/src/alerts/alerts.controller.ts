@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Param, Req, UseGuards } from '@nestjs/common';
 import { AlertsService } from './alerts.service';
 import { AdminJwtGuard } from '../auth/admin-jwt.guard';
 
@@ -18,8 +18,8 @@ export class AlertsController {
   }
 
   @Put('acknowledge-all')
-  async acknowledgeAll(@Body() body: { acknowledgedBy?: string }) {
-    return this.alertsService.acknowledgeAll(body?.acknowledgedBy || 'admin');
+  async acknowledgeAll(@Req() req: { admin?: { email?: string } }) {
+    return this.alertsService.acknowledgeAll(req.admin?.email || 'admin');
   }
 
   @Get(':id')
@@ -30,8 +30,8 @@ export class AlertsController {
   @Put(':id/acknowledge')
   async acknowledge(
     @Param('id') id: string,
-    @Body() body: { acknowledgedBy?: string },
+    @Req() req: { admin?: { email?: string } },
   ) {
-    return this.alertsService.acknowledgeAlert(id, body?.acknowledgedBy || 'admin');
+    return this.alertsService.acknowledgeAlert(id, req.admin?.email || 'admin');
   }
 }

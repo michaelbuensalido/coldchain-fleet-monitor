@@ -102,7 +102,8 @@ export const vehicleHealthMachine = createMachine({
     },
     isOnline: ({ context }) => {
       const tempIn = context.temperature >= context.tempMin && context.temperature <= context.tempMax;
-      const healthyHeartbeat = context.lastSeenDiffMs <= context.heartbeatIntervalMs;
+      // Allow for sweep interval (10s) + one heartbeat interval to avoid false positives
+      const healthyHeartbeat = context.lastSeenDiffMs <= context.heartbeatIntervalMs * 2;
       return tempIn && healthyHeartbeat;
     },
   }

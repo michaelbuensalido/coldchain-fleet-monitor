@@ -8,6 +8,7 @@ interface Vehicle {
   status: string;
   currentRoute: string | null;
   configProfileId: string | null;
+  configProfile?: { id: string; name: string; tempMin: number; tempMax: number; heartbeatIntervalSecs: number } | null;
   active: boolean;
   createdAt: string;
 }

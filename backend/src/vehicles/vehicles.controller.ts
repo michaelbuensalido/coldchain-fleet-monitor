@@ -34,4 +34,9 @@ export class VehiclesController {
   async remove(@Param('id') id: string) {
     return this.vehiclesService.deleteVehicle(id);
   }
+
+  @Get(':id/status-events')
+  async getStatusEvents(@Param('id') id: string) {
+    return this.vehiclesService.getStatusEvents(id);
+  }
 }
