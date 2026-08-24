@@ -59,6 +59,7 @@ export default function HistoryLog() {
             >
               <ArrowLeft size={18} />
             </button>
+            <img src="/logo.png" alt="ColdChainIQ" className="w-8 h-8 rounded-lg border border-blue-500/30 object-cover shadow-sm" />
             <div>
               <h1 className="text-lg font-bold uppercase tracking-wider font-mono">
                 Event History

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import VehicleDetail from './pages/VehicleDetail';
+import HistoryLog from './pages/HistoryLog';
 import { useAuth } from './hooks/useAuth';
 import './index.css';
 
@@ -40,6 +41,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <VehicleDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <HistoryLog />
               </ProtectedRoute>
             }
           />
