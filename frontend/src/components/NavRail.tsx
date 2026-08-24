@@ -74,7 +74,7 @@ export default function NavRail({
       {/* Click-outside backdrop when panel is open */}
       {activePanel !== null && activePanel !== "live" && (
         <div
-          className="fixed inset-0 z-20 bg-slate-950/20 backdrop-blur-[1px]"
+          className="fixed inset-0 z-20 bg-slate-950/25 backdrop-blur-[2px] transition-opacity duration-150"
           onClick={() => onPanelChange(null)}
         />
       )}
@@ -82,35 +82,35 @@ export default function NavRail({
       {/* Vertical Icon Rail */}
       <nav
         aria-label="Primary navigation rail"
-        className="fixed top-4 left-4 z-30 w-[72px] h-[calc(100vh-2rem)] bg-[var(--color-surface-panel)] border border-[var(--color-border-quiet)] backdrop-blur-md rounded-2xl flex flex-col items-center py-5 shadow-2xl transition-all"
+        className="fixed top-4 left-4 z-30 w-[72px] h-[calc(100vh-2rem)] bg-[var(--color-surface-panel)] border border-[var(--color-border-quiet)] backdrop-blur-md rounded-2xl flex flex-col items-center py-5 shadow-2xl"
       >
         {/* Logo / Brand Indicator */}
-        <div
-          className="w-16 h-16 rounded-xl overflow-hidden mb-5 flex items-center justify-center select-none cursor-pointer  shadow-md"
-          title="ColdChainIQ Fleet Monitor"
+        <button
           onClick={() => onPanelChange(null)}
+          className="w-12 h-12 rounded-xl overflow-hidden mb-5 flex items-center justify-center select-none cursor-pointer   active:scale-[0.96] transition-transform duration-150"
+          title="ColdChainIQ Fleet Monitor"
         >
           <img
             src="/logo.png"
             alt="ColdChainIQ Logo"
             className="w-full h-full object-cover"
           />
-        </div>
+        </button>
 
         {/* Main Navigation Buttons */}
         <div className="flex-1 flex flex-col gap-3.5 items-center w-full px-2">
           {/* 1. Live Overview */}
           <button
             onClick={() => onPanelChange(null)}
-            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer relative group ${
+            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer relative group ${
               isLiveActive
-                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400"
+                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]"
                 : "bg-slate-900/40 hover:bg-slate-800/70 border border-slate-800/80 text-slate-400 hover:text-slate-200"
             }`}
             title="Live Fleet Overview"
           >
-            <Radio size={18} />
-            <span className="text-[9px] font-mono font-medium tracking-wide uppercase">
+            <Radio size={18} strokeWidth={2} />
+            <span className="text-[9px] font-mono font-semibold tracking-wider uppercase">
               Live
             </span>
           </button>
@@ -118,22 +118,22 @@ export default function NavRail({
           {/* 2. Alerts */}
           <button
             onClick={() => togglePanel("alerts")}
-            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer relative group ${
+            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer relative group ${
               activePanel === "alerts"
-                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400"
+                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]"
                 : "bg-slate-900/40 hover:bg-slate-800/70 border border-slate-800/80 text-slate-400 hover:text-slate-200"
             }`}
             title="Live Fleet Alerts"
           >
             <div className="relative">
-              <Bell size={18} />
+              <Bell size={18} strokeWidth={2} />
               {unacknowledgedAlerts > 0 && (
-                <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold font-mono rounded-full flex items-center justify-center animate-pulse">
+                <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold font-mono rounded-full flex items-center justify-center shadow-md animate-pulse">
                   {unacknowledgedAlerts}
                 </span>
               )}
             </div>
-            <span className="text-[9px] font-mono font-medium tracking-wide uppercase">
+            <span className="text-[9px] font-mono font-semibold tracking-wider uppercase">
               Alerts
             </span>
           </button>
@@ -141,15 +141,15 @@ export default function NavRail({
           {/* 3. History */}
           <button
             onClick={() => togglePanel("history")}
-            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer relative group ${
+            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer relative group ${
               activePanel === "history"
-                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400"
+                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]"
                 : "bg-slate-900/40 hover:bg-slate-800/70 border border-slate-800/80 text-slate-400 hover:text-slate-200"
             }`}
             title="Event Audit History"
           >
-            <Clock size={18} />
-            <span className="text-[9px] font-mono font-medium tracking-wide uppercase">
+            <Clock size={18} strokeWidth={2} />
+            <span className="text-[9px] font-mono font-semibold tracking-wider uppercase">
               History
             </span>
           </button>
@@ -157,15 +157,15 @@ export default function NavRail({
           {/* 4. Config */}
           <button
             onClick={() => togglePanel("config")}
-            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer relative group ${
+            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer relative group ${
               activePanel === "config"
-                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400"
+                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]"
                 : "bg-slate-900/40 hover:bg-slate-800/70 border border-slate-800/80 text-slate-400 hover:text-slate-200"
             }`}
             title="Manage Config Profiles"
           >
-            <Sliders size={18} />
-            <span className="text-[9px] font-mono font-medium tracking-wide uppercase">
+            <Sliders size={18} strokeWidth={2} />
+            <span className="text-[9px] font-mono font-semibold tracking-wider uppercase">
               Config
             </span>
           </button>
@@ -173,15 +173,15 @@ export default function NavRail({
           {/* 5. Provision */}
           <button
             onClick={() => togglePanel("provision")}
-            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer relative group ${
+            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer relative group ${
               activePanel === "provision"
-                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400"
+                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]"
                 : "bg-slate-900/40 hover:bg-slate-800/70 border border-slate-800/80 text-slate-400 hover:text-slate-200"
             }`}
             title="Provision New Vehicle"
           >
-            <PlusCircle size={18} />
-            <span className="text-[9px] font-mono font-medium tracking-wide uppercase">
+            <PlusCircle size={18} strokeWidth={2} />
+            <span className="text-[9px] font-mono font-semibold tracking-wider uppercase">
               Provision
             </span>
           </button>
@@ -190,10 +190,10 @@ export default function NavRail({
         {/* Logout at bottom */}
         <button
           onClick={onLogout}
-          className="w-10 h-10 rounded-xl bg-slate-900/40 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/30 text-slate-500 hover:text-red-400 flex items-center justify-center transition-colors cursor-pointer"
+          className="w-10 h-10 rounded-xl bg-slate-900/40 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/30 text-slate-500 hover:text-red-400 flex items-center justify-center transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer"
           title="Logout"
         >
-          <LogOut size={16} />
+          <LogOut size={16} strokeWidth={2} />
         </button>
       </nav>
 
@@ -203,7 +203,7 @@ export default function NavRail({
           ref={panelRef}
           role="dialog"
           aria-modal="true"
-          className="fixed top-4 left-[96px] z-30 w-[420px] h-[calc(100vh-2rem)] bg-[var(--color-surface-panel)] border border-[var(--color-border-quiet)] backdrop-blur-md rounded-2xl flex flex-col shadow-2xl overflow-hidden transition-all duration-200"
+          className="fixed top-4 left-[96px] z-30 w-[420px] h-[calc(100vh-2rem)] bg-[var(--color-surface-panel)] border border-[var(--color-border-quiet)] backdrop-blur-md rounded-2xl flex flex-col shadow-2xl overflow-hidden transition-all duration-150"
         >
           {/* Panel content switcher */}
           {activePanel === "alerts" && (

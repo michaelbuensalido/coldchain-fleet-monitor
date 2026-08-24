@@ -76,7 +76,7 @@ export function AlertsPanelContent({
             <button
               onClick={() => acknowledgeAll.mutate()}
               disabled={acknowledgeAll.isPending}
-              className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-[10px] font-mono uppercase text-slate-300 hover:text-green-400 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+              className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-[10px] font-mono uppercase text-slate-300 hover:text-green-400 rounded-lg transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer disabled:opacity-50"
             >
               {acknowledgeAll.isPending ? 'Resolving…' : 'Resolve all'}
             </button>
@@ -84,7 +84,7 @@ export function AlertsPanelContent({
           <button
             onClick={onClose}
             aria-label="Close panel"
-            className="p-1.5 hover:bg-slate-800/60 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 hover:bg-slate-800/60 rounded-lg text-slate-400 hover:text-white transition-colors duration-150 active:scale-[0.96] cursor-pointer"
           >
             <X size={18} />
           </button>

@@ -251,7 +251,7 @@ export default function Sidebar({
             <img
               src="/logo.png"
               alt="ColdChainIQ"
-              className="w-8 h-8 rounded-lg object-cover shadow-sm"
+              className="w-8 h-8 rounded-lg object-cover"
             />
             <div>
               <h2 className="font-sans text-sm font-bold tracking-wide text-[var(--color-text-main)]">
@@ -263,7 +263,7 @@ export default function Sidebar({
           <button
             onClick={() => setIsCollapsed(true)}
             aria-label="Collapse sidebar"
-            className="p-1.5 hover:bg-slate-800/60 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+            className="p-1.5 hover:bg-slate-800/60 rounded-lg text-slate-400 hover:text-white transition-colors duration-150 active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
           >
             <ChevronLeft size={icon.md} />
           </button>
@@ -274,7 +274,7 @@ export default function Sidebar({
           <div className="flex items-center justify-between">
             <button
               onClick={onBack}
-              className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer text-xs font-sans font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 rounded"
+              className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors duration-150 active:scale-[0.96] cursor-pointer text-xs font-sans font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 rounded"
             >
               <ArrowLeft size={icon.sm} />
               <span>Back to fleet</span>
@@ -292,7 +292,7 @@ export default function Sidebar({
                 placeholder="Filter by vehicle name..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-slate-900/60 border border-slate-800/80 rounded-xl text-[var(--color-text-main)] placeholder-slate-500 text-xs focus:outline-none focus:border-blue-500/50 transition-all font-sans"
+                className="w-full pl-9 pr-3 py-2 bg-slate-900/60 border border-slate-800/80 rounded-xl text-[var(--color-text-main)] placeholder-slate-500 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-[border-color,box-shadow] duration-150 font-sans"
               />
             </div>
 
@@ -304,10 +304,10 @@ export default function Sidebar({
                 <button
                   key={filter}
                   onClick={() => onStatusFilterChange(filter)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-sans font-medium uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-sans font-semibold uppercase tracking-wider transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer ${
                     statusFilter === filter
-                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/40"
-                      : "bg-slate-900/40 text-slate-400 border border-slate-800/60 hover:text-slate-200"
+                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/40 shadow-sm"
+                      : "bg-slate-900/40 text-slate-400 border border-slate-800/60 hover:text-slate-200 hover:bg-slate-850/60"
                   }`}
                 >
                   {filter}
@@ -479,7 +479,7 @@ export default function Sidebar({
                   <button
                     key={vehicle.id}
                     onClick={() => onVehicleSelect(vehicle.id)}
-                    className="w-full p-3 bg-slate-900/40 hover:bg-slate-850/60 border border-slate-800/80 hover:border-slate-700/80 rounded-xl flex items-center justify-between transition-all cursor-pointer text-left group"
+                    className="w-full p-3 bg-slate-900/40 hover:bg-slate-850/60 border border-slate-800/80 hover:border-slate-700/80 rounded-xl flex items-center justify-between transition-[background-color,border-color,transform] duration-150 active:scale-[0.98] cursor-pointer text-left group"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -506,7 +506,7 @@ export default function Sidebar({
 
                     {vehicle.status === "degraded" &&
                       degradedSinceMap[vehicle.id] && (
-                        <span className="font-mono text-[10px] text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
+                        <span className="font-mono text-[12px] text-amber-400 px-2 py-1 rounded ">
                           {formatDuration(
                             Math.floor(
                               (Date.now() - degradedSinceMap[vehicle.id]) /

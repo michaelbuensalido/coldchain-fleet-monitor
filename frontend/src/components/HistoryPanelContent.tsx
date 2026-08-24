@@ -63,7 +63,7 @@ export function HistoryPanelContent({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => refetch()}
-            className="p-1.5 hover:bg-slate-800/60 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 hover:bg-slate-800/60 rounded-lg text-slate-400 hover:text-white transition-colors duration-150 active:scale-[0.96] cursor-pointer"
             title="Refresh log"
           >
             <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
@@ -71,7 +71,7 @@ export function HistoryPanelContent({ onClose }: { onClose: () => void }) {
           <button
             onClick={onClose}
             aria-label="Close history panel"
-            className="p-1.5 hover:bg-slate-800/60 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 hover:bg-slate-800/60 rounded-lg text-slate-400 hover:text-white transition-colors duration-150 active:scale-[0.96] cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -240,7 +240,7 @@ export function HistoryPanelContent({ onClose }: { onClose: () => void }) {
                   <button
                     onClick={() => acknowledgeEvent.mutate(event.id)}
                     disabled={acknowledgeEvent.isPending}
-                    className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[9px] font-semibold transition-colors"
+                    className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded-md text-[9px] font-semibold transition-colors duration-150 active:scale-[0.96] cursor-pointer"
                   >
                     Acknowledge
                   </button>

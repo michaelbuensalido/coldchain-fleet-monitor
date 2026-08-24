@@ -121,7 +121,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loginMutation.isPending}
-                  className="w-full rounded-lg bg-blue-500 px-4 py-3 font-light text-white transition-all hover:bg-blue-600 focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-slate-900 focus:outline-none disabled:opacity-50"
+                  className="w-full rounded-lg bg-blue-500 px-4 py-3 font-medium text-white transition-[background-color,transform] duration-150 active:scale-[0.96] hover:bg-blue-600 focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-slate-900 focus:outline-none disabled:opacity-50 cursor-pointer shadow-md"
                 >
                   {loginMutation.isPending ? 'Signing in...' : 'Sign In'}
                 </button>

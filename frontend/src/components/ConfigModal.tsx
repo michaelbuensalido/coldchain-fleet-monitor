@@ -80,7 +80,7 @@ export function ConfigContent({ onClose }: { onClose?: () => void }) {
             </span>
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
-              className="px-2 py-1 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg text-slate-350 hover:text-white transition-colors font-mono text-[10px] flex items-center gap-1 cursor-pointer"
+              className="px-2 py-1 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg text-slate-350 hover:text-white transition-colors duration-150 active:scale-[0.96] font-mono text-[10px] flex items-center gap-1 cursor-pointer"
             >
               <Plus size={10} />
               {showCreateForm ? 'CANCEL' : 'CREATE'}
@@ -97,7 +97,7 @@ export function ConfigContent({ onClose }: { onClose?: () => void }) {
                   type="text"
                   value={newConfig.name}
                   onChange={(e) => setNewConfig({ ...newConfig, name: e.target.value })}
-                  className="w-full px-2.5 py-1.5 bg-slate-950/60 border border-slate-800 rounded-lg text-[var(--color-text-main)] placeholder-slate-500 text-xs focus:outline-none focus:border-blue-500/50 transition-all font-mono"
+                  className="w-full px-2.5 py-1.5 bg-slate-950/60 border border-slate-800 rounded-lg text-[var(--color-text-main)] placeholder-slate-500 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-[border-color,box-shadow] duration-150 font-mono"
                   required
                 />
               </div>
@@ -111,7 +111,7 @@ export function ConfigContent({ onClose }: { onClose?: () => void }) {
                     step="0.1"
                     value={newConfig.tempMin}
                     onChange={(e) => setNewConfig({ ...newConfig, tempMin: parseFloat(e.target.value) })}
-                    className="w-full px-2.5 py-1.5 bg-slate-950/60 border border-slate-800 rounded-lg text-[var(--color-text-main)] text-xs focus:outline-none focus:border-blue-500/50 transition-all font-mono"
+                    className="w-full px-2.5 py-1.5 bg-slate-950/60 border border-slate-800 rounded-lg text-[var(--color-text-main)] text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-[border-color,box-shadow] duration-150 font-mono"
                     required
                   />
                 </div>
@@ -124,7 +124,7 @@ export function ConfigContent({ onClose }: { onClose?: () => void }) {
                     step="0.1"
                     value={newConfig.tempMax}
                     onChange={(e) => setNewConfig({ ...newConfig, tempMax: parseFloat(e.target.value) })}
-                    className="w-full px-2.5 py-1.5 bg-slate-950/60 border border-slate-800 rounded-lg text-[var(--color-text-main)] text-xs focus:outline-none focus:border-blue-500/50 transition-all font-mono"
+                    className="w-full px-2.5 py-1.5 bg-slate-950/60 border border-slate-800 rounded-lg text-[var(--color-text-main)] text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-[border-color,box-shadow] duration-150 font-mono"
                     required
                   />
                 </div>
@@ -136,7 +136,7 @@ export function ConfigContent({ onClose }: { onClose?: () => void }) {
                     type="number"
                     value={newConfig.heartbeatIntervalSecs}
                     onChange={(e) => setNewConfig({ ...newConfig, heartbeatIntervalSecs: parseInt(e.target.value) })}
-                    className="w-full px-2.5 py-1.5 bg-slate-950/60 border border-slate-800 rounded-lg text-[var(--color-text-main)] text-xs focus:outline-none focus:border-blue-500/50 transition-all font-mono"
+                    className="w-full px-2.5 py-1.5 bg-slate-950/60 border border-slate-800 rounded-lg text-[var(--color-text-main)] text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-[border-color,box-shadow] duration-150 font-mono"
                     required
                   />
                 </div>
@@ -144,7 +144,7 @@ export function ConfigContent({ onClose }: { onClose?: () => void }) {
               <button
                 type="submit"
                 disabled={createConfig.isPending}
-                className="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg text-xs transition-colors cursor-pointer"
+                className="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg text-xs transition-[background-color,transform] duration-150 active:scale-[0.96] cursor-pointer"
               >
                 {createConfig.isPending ? 'Creating...' : 'Create Profile'}
               </button>
