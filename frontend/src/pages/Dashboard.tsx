@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVehicles } from '../hooks/useVehicles';
 import { useTelemetryHistory } from '../hooks/useTelemetry';
@@ -6,9 +6,7 @@ import { useAlerts } from '../hooks/useAlerts';
 import { useSocket } from '../hooks/useSocket';
 import Sidebar from '../components/Sidebar';
 import FleetMap from '../components/FleetMap';
-import AlertsPanel from '../components/AlertsPanel';
-import ProvisionModal from '../components/ProvisionModal';
-import ConfigModal from '../components/ConfigModal';
+import NavRail, { type NavRailPanel } from '../components/NavRail';
 
 interface Vehicle {
   id: string;
@@ -40,6 +38,9 @@ export default function Dashboard() {
   const [liveStatusMap, setLiveStatusMap] = useState<Record<string, string>>({});
   const [degradedSinceMap, setDegradedSinceMap] = useState<Record<string, number>>({});
 
+  // Active panel state for NavRail (alerts | history | settings | null)
+  const [activePanel, setActivePanel] = useState<NavRailPanel>(null);
+
   // Initialize degradedSinceMap for vehicles already in degraded state
   useEffect(() => {
     if (vehicles) {
@@ -47,8 +48,6 @@ export default function Dashboard() {
       const initialMap: Record<string, number> = {};
       vehicles.forEach((vehicle) => {
         if (vehicle.status === 'degraded' && !degradedSinceMap[vehicle.id]) {
-          // Use a default of 5 minutes ago for vehicles already degraded on page load
-          // In production, this could be fetched from status event history
           initialMap[vehicle.id] = now - 300000;
         }
       });
@@ -57,14 +56,6 @@ export default function Dashboard() {
       }
     }
   }, [vehicles]);
-
-  // Overlay states
-  const [activeOverlay, setActiveOverlay] = useState<'alerts' | 'provision' | 'config' | null>(null);
-
-  // Trigger refs for focus restoration
-  const alertsTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const provisionTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const configTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const selectedVehicle = vehicles?.find((v) => v.id === selectedVehicleId);
   const { data: telemetry } = useTelemetryHistory(selectedVehicleId || '', 50);
@@ -185,47 +176,32 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Floating Sidebar */}
-      <Sidebar
-        vehicles={sortedVehicles}
-        selectedVehicle={selectedVehicle}
-        telemetry={selectedVehicleId ? (telemetry || []) : allTelemetry}
+      {/* Vertical Icon Rail */}
+      <NavRail
+        activePanel={activePanel}
+        onPanelChange={setActivePanel}
         alerts={alerts || []}
-        onVehicleSelect={handleVehicleSelect}
-        onBack={handleBack}
         onLogout={handleLogout}
-        onOpenAlerts={() => setActiveOverlay('alerts')}
-        onOpenProvision={() => setActiveOverlay('provision')}
-        onOpenConfig={() => setActiveOverlay('config')}
-        alertsTriggerRef={alertsTriggerRef}
-        provisionTriggerRef={provisionTriggerRef}
-        configTriggerRef={configTriggerRef}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        degradedSinceMap={degradedSinceMap}
       />
 
-      {/* Overlays */}
-      <AlertsPanel
-        isOpen={activeOverlay === 'alerts'}
-        onClose={() => setActiveOverlay(null)}
-        alerts={alerts || []}
-        triggerRef={alertsTriggerRef}
-      />
-
-      <ProvisionModal
-        isOpen={activeOverlay === 'provision'}
-        onClose={() => setActiveOverlay(null)}
-        triggerRef={provisionTriggerRef}
-      />
-
-      <ConfigModal
-        isOpen={activeOverlay === 'config'}
-        onClose={() => setActiveOverlay(null)}
-        triggerRef={configTriggerRef}
-      />
+      {/* Fleet Sidebar — visible when live overview is active */}
+      {(activePanel === null || activePanel === 'live') && (
+        <Sidebar
+          vehicles={sortedVehicles}
+          selectedVehicle={selectedVehicle}
+          telemetry={selectedVehicleId ? (telemetry || []) : allTelemetry}
+          alerts={alerts || []}
+          onVehicleSelect={handleVehicleSelect}
+          onBack={handleBack}
+          onLogout={handleLogout}
+          onOpenAlerts={() => setActivePanel('alerts')}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          degradedSinceMap={degradedSinceMap}
+        />
+      )}
     </div>
   );
 }

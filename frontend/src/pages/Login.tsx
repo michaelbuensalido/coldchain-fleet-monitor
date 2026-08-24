@@ -49,15 +49,8 @@ export default function Login() {
             <WelcomeShader />
 
             <div className="relative z-10 space-y-6 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-blue-400/20 bg-blue-500/30 backdrop-blur-sm">
-                <svg className="h-8 w-8 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl overflow-hidden border border-blue-400/30 bg-slate-900 shadow-xl shadow-blue-500/10 backdrop-blur-sm">
+                <img src="/logo.png" alt="ColdChainIQ Logo" className="h-full w-full object-cover" />
               </div>
               <h1 className="text-4xl font-light text-white drop-shadow-lg">Welcome Back</h1>
               <p className="max-w-sm text-lg leading-relaxed text-gray-200 drop-shadow-md">
