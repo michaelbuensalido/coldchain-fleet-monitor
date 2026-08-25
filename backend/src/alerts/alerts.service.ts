@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  formatIncidentRange,
-} from '../health/incident-duration';
+import { formatIncidentRange } from '../health/incident-duration';
 
 @Injectable()
 export class AlertsService {
@@ -106,13 +104,15 @@ export class AlertsService {
     const rangeLabel =
       params.rangeLabel ||
       (params.startedAt && params.durationSeconds != null
-        ? formatIncidentRange(params.fromStatus, params.startedAt, params.recoveredAt, params.durationSeconds)
+        ? formatIncidentRange(
+            params.fromStatus,
+            params.startedAt,
+            params.recoveredAt,
+            params.durationSeconds,
+          )
         : null);
 
-    const suffix = [
-      rangeLabel,
-      params.minor ? 'Minor, self-resolved' : null,
-    ]
+    const suffix = [rangeLabel, params.minor ? 'Minor, self-resolved' : null]
       .filter(Boolean)
       .join('. ');
 
@@ -123,7 +123,9 @@ export class AlertsService {
           durationSeconds: params.durationSeconds,
           recoveredAt: params.recoveredAt,
           minor: params.minor,
-          message: suffix ? `${openAlert.message}. ${suffix}` : openAlert.message,
+          message: suffix
+            ? `${openAlert.message}. ${suffix}`
+            : openAlert.message,
           acknowledged: params.minor,
           acknowledgedAt: params.minor ? params.recoveredAt : null,
           acknowledgedBy: params.minor ? 'system' : null,
