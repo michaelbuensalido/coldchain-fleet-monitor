@@ -15,7 +15,7 @@ export default function ConfigPush() {
     name: '',
     tempMin: 2.0,
     tempMax: 8.0,
-    heartbeatIntervalSecs: 30,
+    heartbeatIntervalSecs: 60,
   });
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [selectedConfigId, setSelectedConfigId] = useState('');
@@ -25,7 +25,7 @@ export default function ConfigPush() {
     createConfig.mutate(newConfig, {
       onSuccess: () => {
         setShowCreateForm(false);
-        setNewConfig({ name: '', tempMin: 2.0, tempMax: 8.0, heartbeatIntervalSecs: 30 });
+        setNewConfig({ name: '', tempMin: 2.0, tempMax: 8.0, heartbeatIntervalSecs: 60 });
       },
     });
   };

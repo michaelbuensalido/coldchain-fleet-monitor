@@ -30,7 +30,10 @@ export class HealthSweepService implements OnModuleInit, OnModuleDestroy {
   async runSweep() {
     try {
       const vehicles = await this.prisma.vehicle.findMany({
-        include: { configProfile: true },
+        include: {
+          configProfile: true,
+          telemetry: { orderBy: { timestamp: 'desc' }, take: 1 },
+        },
       });
 
       const redisClient = this.redis.getClient();
@@ -47,12 +50,20 @@ export class HealthSweepService implements OnModuleInit, OnModuleDestroy {
         const latestStr = await redisClient.get(latestKey);
 
         const now = Date.now();
-        const lastSeenVal = lastSeenStr ? parseInt(lastSeenStr, 10) : 0;
+        let lastSeenVal = lastSeenStr ? parseInt(lastSeenStr, 10) : 0;
+
+        // If Redis doesn't have lastSeen timestamp, check recent DB telemetry
+        if (lastSeenVal === 0 && vehicle.telemetry?.[0]?.timestamp) {
+          lastSeenVal = new Date(vehicle.telemetry[0].timestamp).getTime();
+          await redisClient.set(lastSeenKey, lastSeenVal.toString());
+        }
+
         const lastSeenDiffMs = lastSeenVal > 0 ? now - lastSeenVal : Infinity;
 
         const tempMin = vehicle.configProfile?.tempMin ?? 2.0;
         const tempMax = vehicle.configProfile?.tempMax ?? 8.0;
-        const heartbeatIntervalMs = (vehicle.configProfile?.heartbeatIntervalSecs ?? 30) * 1000;
+        const heartbeatIntervalMs =
+          (vehicle.configProfile?.heartbeatIntervalSecs ?? 60) * 1000;
 
         let temperature = (tempMin + tempMax) / 2;
         if (latestStr) {
@@ -60,6 +71,19 @@ export class HealthSweepService implements OnModuleInit, OnModuleDestroy {
             const telemetry = JSON.parse(latestStr);
             temperature = telemetry.temperature;
           } catch {}
+        } else if (vehicle.telemetry?.[0]) {
+          const dbTel = vehicle.telemetry[0];
+          temperature = dbTel.temperature;
+          await redisClient.set(
+            latestKey,
+            JSON.stringify({
+              temperature: dbTel.temperature,
+              latitude: dbTel.latitude,
+              longitude: dbTel.longitude,
+              doorOpen: dbTel.doorOpen,
+              timestamp: new Date(dbTel.timestamp).getTime().toString(),
+            }),
+          );
         }
 
         // Initialize state machine actor with input context and configure the initial state
@@ -72,29 +96,39 @@ export class HealthSweepService implements OnModuleInit, OnModuleDestroy {
             tempMax,
           },
           state: vehicleHealthMachine.resolveState({
-            value: (vehicle.status === 'online' || vehicle.status === 'degraded' || vehicle.status === 'offline' || vehicle.status === 'pending') ? vehicle.status : 'offline',
+            value:
+              vehicle.status === 'online' ||
+              vehicle.status === 'degraded' ||
+              vehicle.status === 'offline' ||
+              vehicle.status === 'pending'
+                ? vehicle.status
+                : 'offline',
             context: {
               lastSeenDiffMs,
               heartbeatIntervalMs,
               temperature,
               tempMin,
               tempMax,
-            }
-          })
+            },
+          }),
         });
 
         actor.start();
         actor.send({ type: 'CHECK' });
-        
+
         const nextState = actor.getSnapshot().value as string;
         actor.stop();
 
         if (nextState !== vehicle.status) {
-          console.log(`[Health Sweep] Vehicle ${vehicle.name} (${vehicle.id}) transitioning ${vehicle.status} -> ${nextState}`);
+          console.log(
+            `[Health Sweep] Vehicle ${vehicle.name} (${vehicle.id}) transitioning ${vehicle.status} -> ${nextState}`,
+          );
 
           let reason = 'Normal telemetry check-in';
           let alertSeverity: 'info' | 'warning' | 'critical' = 'info';
-          let alertType: 'status_change' | 'temperature_excursion' | 'connectivity_loss' = 'status_change';
+          let alertType:
+            'status_change' | 'temperature_excursion' | 'connectivity_loss' =
+            'status_change';
           let durationSeconds: number | undefined = undefined;
           let isMinor = false;
 
@@ -206,6 +240,7 @@ export class HealthSweepService implements OnModuleInit, OnModuleDestroy {
             JSON.stringify({
               vehicleId: vehicle.id,
               name: vehicle.name,
+              status: nextState,
               fromStatus: vehicle.status,
               toStatus: nextState,
               reason,
@@ -217,7 +252,10 @@ export class HealthSweepService implements OnModuleInit, OnModuleDestroy {
         }
       }
     } catch (err: any) {
-      console.error('[Health Sweep] Sweep error:', err?.message || 'Unknown error');
+      console.error(
+        '[Health Sweep] Sweep error:',
+        err?.message || 'Unknown error',
+      );
     }
   }
 }

@@ -75,7 +75,9 @@ export function HistoryPanelContent({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className={`flex-1 flex flex-col min-h-0 ${surface.panel} text-[var(--color-text-main)] font-sans`}>
+    <div
+      className={`flex-1 flex flex-col min-h-0 ${surface.panel} text-[var(--color-text-main)] font-sans`}
+    >
       {/* Header */}
       <div className="p-4 border-b border-[var(--color-border-quiet)] bg-slate-950/20 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-2">
@@ -219,11 +221,7 @@ export function HistoryPanelContent({ onClose }: { onClose: () => void }) {
             return (
               <div
                 key={event.id}
-                className={`p-3.5 rounded-xl space-y-2.5 transition-[background-color,border-color,box-shadow] duration-150 ${
-                  !event.acknowledged
-                    ? "bg-red-950/15 border border-red-500/30 border-l-4 border-l-red-500 shadow-sm"
-                    : "bg-slate-900/30 border border-slate-800/60"
-                }`}
+                className={`p-3.5 rounded-xl space-y-2.5 transition-[background-color,border-color,box-shadow] duration-150 bg-slate-900/30 border border-slate-800/60`}
               >
                 {/* 1. Headline: Status Transition + Timestamp */}
                 <div className="flex items-center justify-between gap-2">
@@ -274,8 +272,8 @@ export function HistoryPanelContent({ onClose }: { onClose: () => void }) {
 
                   {event.acknowledged ? (
                     <span className="font-sans text-xs text-slate-500 flex items-center gap-1">
-                      <CheckCircle size={12} className="text-emerald-500" /> Acked
-                      by {event.acknowledgedBy || "system"}
+                      <CheckCircle size={12} className="text-emerald-500" />{" "}
+                      Acked by {event.acknowledgedBy || "system"}
                     </span>
                   ) : (
                     <button

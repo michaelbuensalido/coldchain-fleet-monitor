@@ -1,96 +1,208 @@
+/* Hallmark · redesign · genre: atmospheric · theme: Midnight
+ * macrostructure: Workbench · nav: N3 Side-rail
+ * paper-band: dark (L<30%) · display: grotesk+mono · accent: cool cyan ~196°
+ * pre-emit critique: P5 H5 E5 S5 R5 V4
+ */
+
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
+/* ─── Design Tokens ───────────────────────────────────────────── */
 :root {
-  /* Colors */
-  --color-bg-base: #0b0f17;
-  --color-surface-panel: rgba(18, 27, 42, 0.85);
-  --color-border-quiet: #1e293b;
-  --color-text-dim: #64748b;
-  --color-text-main: #f1f5f9;
-  
-  --color-status-online: #10b981;
-  --color-status-degraded: #f59e0b;
-  --color-status-offline: #ef4444;
+  /* Paper — 3-level depth system */
+  --color-paper:         oklch(0.10 0.018 240);   /* base canvas */
+  --color-paper-1:       oklch(0.13 0.020 240);   /* floating panel */
+  --color-paper-2:       oklch(0.16 0.022 240);   /* card / well */
+  --color-paper-3:       oklch(0.20 0.024 240);   /* raised / hover */
+
+  /* Borders */
+  --color-border:        oklch(0.22 0.022 240);   /* default edge */
+  --color-border-strong: oklch(0.28 0.025 240);   /* hover edge */
+  --color-border-quiet:  oklch(0.18 0.018 240);   /* quiet divider */
+
+  /* Text */
+  --color-text-main:     oklch(0.94 0.010 220);   /* primary */
+  --color-text-dim:      oklch(0.60 0.015 230);   /* secondary / label */
+  --color-text-muted:    oklch(0.42 0.012 230);   /* tertiary / eyebrow */
+
+  /* Accent — phosphor cyan */
+  --color-accent:        oklch(0.78 0.15 196);    /* primary CTA / glow */
+  --color-accent-dim:    oklch(0.78 0.15 196 / 0.15); /* accent tint bg */
+  --color-accent-edge:   oklch(0.78 0.15 196 / 0.35); /* accent border */
+  --color-accent-glow:   oklch(0.78 0.15 196 / 0.25); /* box-shadow glow */
+
+  /* Status */
+  --color-status-online:   oklch(0.72 0.18 155);  /* emerald */
+  --color-status-degraded: oklch(0.78 0.17  75);  /* amber */
+  --color-status-offline:  oklch(0.62 0.22  25);  /* red */
+  --color-status-pending:  oklch(0.52 0.01 240);  /* neutral */
+
+  /* Status tints */
+  --color-status-online-dim:   oklch(0.72 0.18 155 / 0.12);
+  --color-status-degraded-dim: oklch(0.78 0.17  75 / 0.12);
+  --color-status-offline-dim:  oklch(0.62 0.22  25 / 0.12);
+  --color-status-pending-dim:  oklch(0.52 0.01 240 / 0.12);
+
+  /* Status edges */
+  --color-status-online-edge:   oklch(0.72 0.18 155 / 0.30);
+  --color-status-degraded-edge: oklch(0.78 0.17  75 / 0.30);
+  --color-status-offline-edge:  oklch(0.62 0.22  25 / 0.30);
+
+  /* Severity */
+  --color-severity-mild:        oklch(0.82 0.14  80);
+  --color-severity-mild-dim:    oklch(0.82 0.14  80 / 0.14);
+  --color-severity-severe:      oklch(0.65 0.22  25);
+  --color-severity-severe-dim:  oklch(0.65 0.22  25 / 0.14);
+
+  /* Focus */
+  --color-focus: oklch(0.78 0.15 196 / 0.60);
+
+  /* Panel surfaces */
+  --color-surface-panel:   oklch(0.13 0.020 240 / 0.88);
+  --color-surface-card:    oklch(0.16 0.022 240 / 0.90);
+  --color-surface-scrim:   oklch(0.05 0.010 240 / 0.60);
 
   /* Typography */
-  --font-primary: 'Outfit', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-data:    'JetBrains Mono', ui-monospace, monospace;
+
+  /* Motion */
+  --dur-micro:  80ms;
+  --dur-fast:   150ms;
+  --dur-base:   220ms;
+  --ease-out:   cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Legacy aliases — kept so Tailwind utility classes still resolve */
+  --color-bg-base: var(--color-paper);
+  --color-text-dim: var(--color-text-muted);
 }
 
-* {
+/* ─── Reset ───────────────────────────────────────────────────── */
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
-body {
+html, body {
   margin: 0;
-  font-family: var(--font-primary);
-  background-color: var(--color-bg-base);
+  overflow-x: clip; /* gate 34 — no horizontal scroll */
+}
+
+body {
+  font-family: var(--font-display);
+  background-color: var(--color-paper);
   color: var(--color-text-main);
-  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.font-mono {
-  font-family: var(--font-mono);
+/* gate 38a — no italic headers anywhere */
+h1, h2, h3, h4, h5, h6 {
+  font-style: normal;
 }
 
-/* Custom Webkit scrollbar for panels */
+/* ─── Typography utilities ────────────────────────────────────── */
+.font-mono  { font-family: var(--font-data); }
+.font-sans  { font-family: var(--font-display); }
+
+/* ─── Focus ───────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border-quiet);
+  background: var(--color-border);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-dim);
+  background: var(--color-border-strong);
 }
 
-/* Custom leaflet styles to blend with dark mode */
+/* ─── Status dot animations ───────────────────────────────────── */
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.75); }
+}
+@keyframes dot-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.dot-online {
+  animation: dot-pulse 2s var(--ease-out) infinite;
+}
+.dot-pending {
+  animation: dot-blink 1.4s ease-in-out infinite;
+}
+
+/* ─── Panel slide-in animation ────────────────────────────────── */
+@keyframes panel-enter {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.panel-enter {
+  animation: panel-enter var(--dur-base) var(--ease-out) both;
+}
+
+/* ─── Leaflet dark mode ───────────────────────────────────────── */
 .leaflet-container {
-  background: var(--color-bg-base) !important;
-  font-family: var(--font-primary) !important;
+  background: var(--color-paper) !important;
+  font-family: var(--font-display) !important;
 }
 
-/* Custom marker icon container */
+/* ─── Map marker ─────────────────────────────────────────────── */
 .custom-marker-container {
   cursor: pointer;
   background: none !important;
   border: none !important;
-  /* overflow: visible so SVG pulse rings aren't clipped */
   overflow: visible !important;
 }
-
 .custom-marker-container .marker-name-tag {
-  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform     var(--dur-fast) var(--ease-out),
+    background    var(--dur-fast) ease,
+    border-color  var(--dur-fast) ease,
+    box-shadow    var(--dur-fast) ease;
 }
-
 .custom-marker-container:hover .marker-name-tag {
   transform: translateX(-50%) scale(1.06);
-  background: rgba(15, 23, 42, 0.95) !important;
-  border-color: #3b82f6 !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7), 0 0 8px rgba(59, 130, 246, 0.4) !important;
+  background: oklch(0.10 0.018 240 / 0.95) !important;
+  border-color: var(--color-accent) !important;
+  color: var(--color-text-main) !important;
+  box-shadow:
+    0 4px 14px oklch(0 0 0 / 0.70),
+    0 0 10px var(--color-accent-glow) !important;
 }
-
 .custom-marker-container:active .marker-name-tag {
   transform: translateX(-50%) scale(0.96);
 }
 
-/* Popup appear animation */
+/* ─── Popup animation ─────────────────────────────────────────── */
 @keyframes popup-appear {
   from { opacity: 0; transform: translateY(calc(-100% + 8px)); }
   to   { opacity: 1; transform: translateY(-100%); }
 }
 
-/* Accessible focus outline */
-button:focus-visible, 
-input:focus-visible, 
-select:focus-visible {
-  outline: 2px solid var(--color-text-main);
-  outline-offset: 2px;
+/* ─── Reduced motion ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

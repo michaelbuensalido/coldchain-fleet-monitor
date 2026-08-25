@@ -651,7 +651,7 @@ export default function FleetMap({
   onVehicleDeselect,
   telemetryMap,
 }: FleetMapProps) {
-  const center: [number, number] = [47.6062, -122.3321];
+  const center: [number, number] = [1.3521, 103.8198];
   const [mapReady, setMapReady] = useState(false);
 
   // Ref to suppress fly-to when selection originates from a map click

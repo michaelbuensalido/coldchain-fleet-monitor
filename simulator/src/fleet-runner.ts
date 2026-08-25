@@ -3,7 +3,7 @@ import { fork, ChildProcess } from 'child_process';
 import * as path from 'path';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
-const VEHICLE_COUNT = parseInt(process.env.VEHICLE_COUNT || '5', 10); // default to 5 for resource constraint
+const VEHICLE_COUNT = parseInt(process.env.VEHICLE_COUNT || '20', 10); // default to 20 vehicles (5 initial + 15 added)
 
 const processes: ChildProcess[] = [];
 
@@ -28,7 +28,7 @@ async function startFleet() {
         name: 'Pharma standard (2-8C)',
         tempMin: 2.0,
         tempMax: 8.0,
-        heartbeatIntervalSecs: 5, // fast checks for lab/sim purposes
+        heartbeatIntervalSecs: 10, // 10 seconds heartbeat interval
       },
       { headers: authHeaders },
     );
@@ -42,7 +42,7 @@ async function startFleet() {
 
       const vRes = await axios.post(
         `${BACKEND_URL}/vehicles`,
-        { name, currentRoute: `Route-${String(100 + i)}` },
+        { name, currentRoute: `Route-SG${String(i).padStart(2, '0')}` },
         { headers: authHeaders },
       );
 
@@ -57,8 +57,8 @@ async function startFleet() {
       );
       console.log(`Assigned config profile to vehicle ${vehicle.id}`);
 
-      // Stagger spawn
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Stagger spawn (300ms delay per vehicle)
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       const child = fork(
         path.join(__dirname, '..', 'dist', 'vehicle.js'),

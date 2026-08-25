@@ -37,7 +37,7 @@ model ConfigProfile {
   name                   String
   tempMin                Float
   tempMax                Float
-  heartbeatIntervalSecs  Int      @default(30)
+  heartbeatIntervalSecs  Int      @default(60)
   vehicles               Vehicle[]
 }
 
