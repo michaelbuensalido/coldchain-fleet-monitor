@@ -87,7 +87,7 @@ export function ProvisionContent({ onClose }: { onClose?: () => void }) {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900/50 border border-slate-800 rounded-xl text-[var(--color-text-main)] placeholder-slate-500 text-xs focus:outline-none focus:border-blue-500/50 transition-all font-mono"
+                className="w-full px-3 py-2 bg-slate-900/50 border border-slate-800 rounded-xl text-[var(--color-text-main)] placeholder-slate-500 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-[border-color,box-shadow] duration-150 font-mono"
                 placeholder="Truck-006"
                 required
               />
@@ -100,14 +100,14 @@ export function ProvisionContent({ onClose }: { onClose?: () => void }) {
                 type="text"
                 value={route}
                 onChange={(e) => setRoute(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900/50 border border-slate-800 rounded-xl text-[var(--color-text-main)] placeholder-slate-500 text-xs focus:outline-none focus:border-blue-500/50 transition-all font-mono"
+                className="w-full px-3 py-2 bg-slate-900/50 border border-slate-800 rounded-xl text-[var(--color-text-main)] placeholder-slate-500 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-[border-color,box-shadow] duration-150 font-mono"
                 placeholder="Route-105"
               />
             </div>
             <button
               type="submit"
               disabled={createVehicle.isPending}
-              className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-semibold rounded-xl text-xs transition-colors cursor-pointer font-mono"
+              className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-semibold rounded-xl text-xs transition-[background-color,transform] duration-150 active:scale-[0.96] cursor-pointer font-mono shadow-sm"
             >
               {createVehicle.isPending ? 'Provisioning...' : 'Provision Vehicle'}
             </button>

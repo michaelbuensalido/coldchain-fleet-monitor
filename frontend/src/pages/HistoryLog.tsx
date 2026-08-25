@@ -219,72 +219,84 @@ export default function HistoryLog() {
                     <th className="p-3.5 pr-5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/40 text-xs font-mono">
-                  {data.events.map((event) => (
-                    <tr key={event.id} className="hover:bg-slate-900/20 transition-colors">
-                      <td className="p-3.5 pl-5 text-slate-200 font-semibold">{event.vehicle.name}</td>
-                      <td className="p-3.5">
-                        <div className="space-y-0.5">
-                          <span className="text-slate-200">
-                            {event.eventLabel || event.reason || 'Status change'}
-                          </span>
-                          {event.reason && event.eventLabel && (
-                            <div className="text-[10px] text-slate-500 max-w-xs truncate" title={event.reason}>
-                              {event.reason}
-                            </div>
+                <tbody className="divide-y divide-slate-800/40 text-xs font-sans">
+                  {data.events.map((event) => {
+                    const isLongDuration =
+                      event.durationSeconds != null && event.durationSeconds >= 300;
+                    return (
+                      <tr
+                        key={event.id}
+                        className={`transition-colors ${
+                          !event.acknowledged
+                            ? 'bg-red-950/15 border-l-2 border-l-red-500 hover:bg-red-950/25'
+                            : 'hover:bg-slate-900/20'
+                        }`}
+                      >
+                        <td className="p-3.5 pl-5 text-slate-200 font-semibold font-sans">
+                          {event.vehicle.name}
+                        </td>
+                        <td className="p-3.5">
+                          {event.reason ? (
+                            <span className="text-slate-300 font-sans">{event.reason}</span>
+                          ) : (
+                            <span className="text-slate-500 font-sans italic">—</span>
                           )}
-                        </div>
-                      </td>
-                      <td className="p-3.5">
-                        <div className="flex items-center gap-1.5">
-                          <StatusBadge status={event.fromStatus} />
-                          <span className="text-slate-600">→</span>
-                          <StatusBadge status={event.toStatus} />
-                        </div>
-                      </td>
-                      <td className="p-3.5 text-slate-400 whitespace-nowrap">
-                        {new Date(event.timestamp).toLocaleString()}
-                      </td>
-                      <td className="p-3.5 text-slate-400">
-                        {event.durationSeconds != null ? (
+                        </td>
+                        <td className="p-3.5">
                           <div className="flex items-center gap-1.5">
-                            <Clock size={11} className="text-slate-600" />
-                            {formatDuration(event.durationSeconds)}
+                            <StatusBadge status={event.fromStatus} />
+                            <span className="text-slate-600 font-sans text-xs">→</span>
+                            <StatusBadge status={event.toStatus} />
                           </div>
-                        ) : (
-                          <span className="text-slate-600">—</span>
-                        )}
-                      </td>
-                      <td className="p-3.5">
-                        {event.acknowledged ? (
-                          <div className="space-y-0.5 text-slate-400 text-[11px]">
-                            <div className="flex items-center gap-1 text-emerald-400">
-                              <CheckCircle size={10} />
-                              <span>Acknowledged by {event.acknowledgedBy || 'unknown'}</span>
-                            </div>
-                            {event.acknowledgedAt && (
-                              <div className="text-[10px] text-slate-600">
-                                {new Date(event.acknowledgedAt).toLocaleString()}
+                        </td>
+                        <td className="p-3.5 text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                          {new Date(event.timestamp).toLocaleString()}
+                        </td>
+                        <td className="p-3.5">
+                          {isLongDuration ? (
+                            <span className="font-mono text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                              <Clock size={10} className="text-amber-400" />
+                              {formatDuration(event.durationSeconds!)}
+                            </span>
+                          ) : (
+                            <span className="font-mono text-[11px] text-slate-400">
+                              {event.durationSeconds != null
+                                ? formatDuration(event.durationSeconds)
+                                : '—'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3.5 font-sans">
+                          {event.acknowledged ? (
+                            <div className="space-y-0.5 text-slate-400 text-xs">
+                              <div className="flex items-center gap-1 text-emerald-400">
+                                <CheckCircle size={12} />
+                                <span>Acked by {event.acknowledgedBy || 'system'}</span>
                               </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-amber-400/90 font-semibold">Unacknowledged</span>
-                        )}
-                      </td>
-                      <td className="p-3.5 pr-5 text-right">
-                        {!event.acknowledged && (
-                          <button
-                            onClick={() => acknowledgeEvent.mutate(event.id)}
-                            disabled={acknowledgeEvent.isPending}
-                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white font-sans text-[10px] font-semibold rounded-lg shadow-md transition-all cursor-pointer disabled:opacity-50"
-                          >
-                            Acknowledge
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                              {event.acknowledgedAt && (
+                                <div className="text-[10px] text-slate-600 font-mono">
+                                  {new Date(event.acknowledgedAt).toLocaleString()}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-red-400 font-semibold text-xs">Unacknowledged</span>
+                          )}
+                        </td>
+                        <td className="p-3.5 pr-5 text-right">
+                          {!event.acknowledged && (
+                            <button
+                              onClick={() => acknowledgeEvent.mutate(event.id)}
+                              disabled={acknowledgeEvent.isPending}
+                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white font-sans text-xs font-medium rounded-lg shadow-sm transition-[background-color,transform] duration-150 active:scale-[0.96] cursor-pointer disabled:opacity-50"
+                            >
+                              {acknowledgeEvent.isPending ? 'Acknowledging...' : 'Acknowledge'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}

@@ -8,6 +8,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { Plus, Minus, Maximize2 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,18 +44,22 @@ const STATUS_COLORS: Record<string, string> = {
   pending: "#94a3b8",
 };
 
-const createCustomIcon = (status: string, isSelected: boolean) => {
+const createCustomIcon = (
+  name: string,
+  status: string,
+  isSelected: boolean,
+) => {
   const color = STATUS_COLORS[status] ?? STATUS_COLORS.pending;
 
-  const ringSize = isSelected ? 48 : 28;
+  const ringSize = isSelected ? 44 : 26;
   const centerSize = isSelected ? 14 : 8;
-  const borderSize = isSelected ? 4 : 3;
+  const borderSize = isSelected ? 3.5 : 2.5;
 
   const svgIcon = `
-    <svg width="${ringSize}" height="${ringSize}" viewBox="0 0 ${ringSize} ${ringSize}" xmlns="http://www.w3.org/2000/svg" style="overflow: visible;">
+    <svg width="${ringSize}" height="${ringSize}" viewBox="0 0 ${ringSize} ${ringSize}" xmlns="http://www.w3.org/2000/svg" style="overflow: visible; display: block;">
       <defs>
         <filter id="glow-${status}-${isSelected ? "sel" : "unsel"}" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="0" stdDeviation="${isSelected ? 5 : 3}" flood-color="${color}" flood-opacity="${isSelected ? 0.9 : 0.6}" />
+          <feDropShadow dx="0" dy="0" stdDeviation="${isSelected ? 4 : 2}" flood-color="${color}" flood-opacity="${isSelected ? 0.9 : 0.6}" />
         </filter>
       </defs>
       ${
@@ -71,7 +76,7 @@ const createCustomIcon = (status: string, isSelected: boolean) => {
           <animate attributeName="opacity" values="0.7;0" dur="1.8s" begin="0.6s" repeatCount="indefinite"/>
         </circle>
         <!-- Static halo ring -->
-        <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${(centerSize + borderSize * 2) / 2 + 5}" fill="none" stroke="${color}" stroke-width="1" opacity="0.25"/>
+        <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${(centerSize + borderSize * 2) / 2 + 4}" fill="none" stroke="${color}" stroke-width="1" opacity="0.25"/>
       `
           : ""
       }
@@ -82,8 +87,38 @@ const createCustomIcon = (status: string, isSelected: boolean) => {
     </svg>
   `;
 
+  const html = `
+    <div style="position: relative; width: ${ringSize}px; height: ${ringSize}px; display: flex; align-items: center; justify-content: center;">
+      <div class="marker-name-tag" style="
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-bottom: 3px;
+        background: rgba(11, 15, 23, 0.85);
+        border: 1px solid ${isSelected ? color : "rgba(30, 41, 59, 0.8)"};
+        border-radius: 6px;
+        padding: 1.5px 6px;
+        color: ${isSelected ? "#ffffff" : "#cbd5e1"};
+        font-size: 10px;
+        font-family: var(--font-mono, monospace);
+        font-weight: 600;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 6px ${color}33;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        letter-spacing: 0.02em;
+        pointer-events: auto;
+        cursor: pointer;
+      ">
+        ${name}
+      </div>
+      ${svgIcon}
+    </div>
+  `;
+
   return L.divIcon({
-    html: svgIcon,
+    html,
     className: "custom-marker-container",
     iconSize: [ringSize, ringSize],
     iconAnchor: [ringSize / 2, ringSize / 2],
@@ -112,7 +147,7 @@ const applyJitterOffset = (vehicles: Vehicle[]): Vehicle[] => {
   });
 };
 
-// ─── MapController — handles fly-to on sidebar-driven selection ───────────────
+// ─── MapController — handles fly-to on selection and initial bounds ─────────
 
 function MapController({
   selectedVehicle,
@@ -124,6 +159,7 @@ function MapController({
   suppressNextFly: React.MutableRefObject<boolean>;
 }) {
   const map = useMap();
+  const hasInitialFit = useRef(false);
 
   useEffect(() => {
     if (
@@ -138,19 +174,68 @@ function MapController({
       map.flyTo([selectedVehicle.latitude, selectedVehicle.longitude], 13, {
         duration: 1.2,
       });
-    } else if (!selectedVehicle && vehicles.length > 0) {
-      const bounds = L.latLngBounds(
-        vehicles
-          .filter((v) => v.latitude !== undefined && v.longitude !== undefined)
-          .map((v) => [v.latitude!, v.longitude!]),
+    } else if (!selectedVehicle && !hasInitialFit.current && vehicles.length > 0) {
+      const valid = vehicles.filter(
+        (v) => v.latitude !== undefined && v.longitude !== undefined,
       );
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [80, 80] });
+      if (valid.length > 0) {
+        const bounds = L.latLngBounds(valid.map((v) => [v.latitude!, v.longitude!]));
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [80, 80] });
+          hasInitialFit.current = true;
+        }
       }
     }
   }, [map, selectedVehicle, vehicles, suppressNextFly]);
 
   return null;
+}
+
+// ─── MapZoomControls — zoom in/out & fit fleet buttons ─────────────────────
+
+function MapZoomControls({ vehicles }: { vehicles: Vehicle[] }) {
+  const map = useMap();
+
+  const handleFitAll = useCallback(() => {
+    const valid = vehicles.filter(
+      (v) => v.latitude !== undefined && v.longitude !== undefined,
+    );
+    if (valid.length > 0) {
+      const bounds = L.latLngBounds(valid.map((v) => [v.latitude!, v.longitude!]));
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [80, 80] });
+      }
+    }
+  }, [map, vehicles]);
+
+  return (
+    <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-1.5 pointer-events-auto">
+      <button
+        onClick={() => map.zoomIn()}
+        aria-label="Zoom in"
+        className="w-9 h-9 bg-[var(--color-surface-panel)] hover:bg-slate-800 border border-[var(--color-border-quiet)] text-slate-300 hover:text-white rounded-xl shadow-lg flex items-center justify-center transition-[background-color,transform] duration-150 active:scale-[0.96] cursor-pointer"
+        title="Zoom in"
+      >
+        <Plus size={16} />
+      </button>
+      <button
+        onClick={() => map.zoomOut()}
+        aria-label="Zoom out"
+        className="w-9 h-9 bg-[var(--color-surface-panel)] hover:bg-slate-800 border border-[var(--color-border-quiet)] text-slate-300 hover:text-white rounded-xl shadow-lg flex items-center justify-center transition-[background-color,transform] duration-150 active:scale-[0.96] cursor-pointer"
+        title="Zoom out"
+      >
+        <Minus size={16} />
+      </button>
+      <button
+        onClick={handleFitAll}
+        aria-label="Fit all vehicles"
+        className="w-9 h-9 bg-[var(--color-surface-panel)] hover:bg-slate-800 border border-[var(--color-border-quiet)] text-slate-300 hover:text-white rounded-xl shadow-lg flex items-center justify-center transition-[background-color,transform] duration-150 active:scale-[0.96] cursor-pointer mt-1"
+        title="Fit all vehicles in view"
+      >
+        <Maximize2 size={15} />
+      </button>
+    </div>
+  );
 }
 
 // ─── MapClickCapture — closes popup when clicking empty map space ─────────────
@@ -182,7 +267,6 @@ function PixelPositionTracker({
     map.on("move zoom viewreset", update);
     return () => {
       map.off("move zoom viewreset", update);
-      onPosition(null);
     };
   }, [map, lat, lng, onPosition]);
 
@@ -248,7 +332,12 @@ interface PopupOverlayProps {
 const POPUP_WIDTH = 224;
 const POPUP_ARROW_OFFSET = 20; // px above marker centre
 
-function PopupOverlay({ vehicle, telemetry, pixelPos, onClose }: PopupOverlayProps) {
+function PopupOverlay({
+  vehicle,
+  telemetry,
+  pixelPos,
+  onClose,
+}: PopupOverlayProps) {
   const color = STATUS_COLORS[vehicle.status] ?? STATUS_COLORS.pending;
   const hasTemp = telemetry?.temperature !== undefined;
 
@@ -348,7 +437,14 @@ function PopupOverlay({ vehicle, telemetry, pixelPos, onClose }: PopupOverlayPro
             >
               {vehicle.name}
             </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                flexShrink: 0,
+              }}
+            >
               <InlineStatusBadge status={vehicle.status} />
               <button
                 onClick={(e) => {
@@ -492,18 +588,11 @@ function MapInner({
 
   const handleMarkerClick = useCallback(
     (vehicle: Vehicle) => {
-      if (popupVehicleId === vehicle.id) {
-        // Toggle off same marker
-        onPopupClose();
-        onVehicleDeselect?.();
-      } else {
-        // Suppress fly-to since the user clicked directly on the marker (already visible)
-        suppressNextFly.current = true;
-        onPopupOpen(vehicle.id);
-        onVehicleSelect?.(vehicle.id);
-      }
+      suppressNextFly.current = true;
+      onPopupOpen(vehicle.id);
+      onVehicleSelect?.(vehicle.id);
     },
-    [popupVehicleId, onPopupOpen, onPopupClose, onVehicleSelect, onVehicleDeselect, suppressNextFly],
+    [onPopupOpen, onVehicleSelect, suppressNextFly],
   );
 
   return (
@@ -518,21 +607,27 @@ function MapInner({
         suppressNextFly={suppressNextFly}
       />
       <MapClickCapture onMapClick={handleMapClick} />
+      <MapZoomControls vehicles={vehicles} />
 
       {/* Track popup vehicle's pixel position and report it upward */}
-      {popupVehicle?.latitude !== undefined && popupVehicle?.longitude !== undefined && (
-        <PixelPositionTracker
-          lat={popupVehicle.latitude}
-          lng={popupVehicle.longitude}
-          onPosition={onPopupPosition}
-        />
-      )}
+      {popupVehicle?.latitude !== undefined &&
+        popupVehicle?.longitude !== undefined && (
+          <PixelPositionTracker
+            lat={popupVehicle.latitude}
+            lng={popupVehicle.longitude}
+            onPosition={onPopupPosition}
+          />
+        )}
 
       {vehicles.map((vehicle) => (
         <Marker
           key={vehicle.id}
           position={[vehicle.latitude!, vehicle.longitude!]}
-          icon={createCustomIcon(vehicle.status, vehicle.id === selectedVehicleId)}
+          icon={createCustomIcon(
+            vehicle.name,
+            vehicle.status,
+            vehicle.id === selectedVehicleId,
+          )}
           opacity={vehicle.status === "offline" ? 0.75 : 1.0}
           zIndexOffset={vehicle.id === selectedVehicleId ? 1000 : 0}
           eventHandlers={{
@@ -565,19 +660,18 @@ export default function FleetMap({
   // Popup state lives here (outside MapContainer) so the overlay can be rendered
   // in the outer relative div — MapContainer has overflow:hidden which would clip it.
   const [popupVehicleId, setPopupVehicleId] = useState<string | null>(null);
-  const [popupPixelPos, setPopupPixelPos] = useState<{ x: number; y: number } | null>(null);
+  const [popupPixelPos, setPopupPixelPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
-  // Sync popup with external selection changes (sidebar click)
-  const prevSelectedRef = useRef<string | null | undefined>(selectedVehicleId);
+  // Sync popup with selection changes (sidebar click or marker click)
   useEffect(() => {
-    if (selectedVehicleId !== prevSelectedRef.current) {
-      prevSelectedRef.current = selectedVehicleId;
-      if (selectedVehicleId) {
-        setPopupVehicleId(selectedVehicleId);
-      } else {
-        setPopupVehicleId(null);
-        setPopupPixelPos(null);
-      }
+    if (selectedVehicleId) {
+      setPopupVehicleId(selectedVehicleId);
+    } else {
+      setPopupVehicleId(null);
+      setPopupPixelPos(null);
     }
   }, [selectedVehicleId]);
 
@@ -603,7 +697,9 @@ export default function FleetMap({
     );
   }, [vehicles]);
 
-  const popupVehicle = vehiclesWithLocation.find((v) => v.id === popupVehicleId);
+  const popupVehicle = vehiclesWithLocation.find(
+    (v) => v.id === popupVehicleId,
+  );
 
   return (
     <div className="relative w-full h-full">
@@ -648,18 +744,40 @@ export default function FleetMap({
         </div>
         {[
           { color: "#10b981", glow: "#10b981", label: "Online", opacity: "1" },
-          { color: "#f59e0b", glow: "#f59e0b", label: "Degraded", opacity: "1" },
-          { color: "#ef4444", glow: "#ef4444", label: "Offline", opacity: "0.75" },
-          { color: "#94a3b8", glow: "rgba(148,163,184,0.5)", label: "Pending", opacity: "1" },
+          {
+            color: "#f59e0b",
+            glow: "#f59e0b",
+            label: "Degraded",
+            opacity: "1",
+          },
+          {
+            color: "#ef4444",
+            glow: "#ef4444",
+            label: "Offline",
+            opacity: "0.75",
+          },
+          {
+            color: "#94a3b8",
+            glow: "rgba(148,163,184,0.5)",
+            label: "Pending",
+            opacity: "1",
+          },
         ].map(({ color, glow, label, opacity }) => (
           <div key={label} className="flex items-center gap-2">
             <span
               className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ backgroundColor: color, boxShadow: `0 0 6px ${glow}`, opacity }}
+              style={{
+                backgroundColor: color,
+                boxShadow: `0 0 6px ${glow}`,
+                opacity,
+              }}
             />
             <span
               className="text-[11px] font-mono"
-              style={{ color: `color-mix(in srgb, ${color} 80%, white)`, opacity }}
+              style={{
+                color: `color-mix(in srgb, ${color} 80%, white)`,
+                opacity,
+              }}
             >
               {label}
             </span>

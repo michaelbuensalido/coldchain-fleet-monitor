@@ -65,6 +65,22 @@ body {
   overflow: visible !important;
 }
 
+.custom-marker-container .marker-name-tag {
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.custom-marker-container:hover .marker-name-tag {
+  transform: translateX(-50%) scale(1.06);
+  background: rgba(15, 23, 42, 0.95) !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7), 0 0 8px rgba(59, 130, 246, 0.4) !important;
+}
+
+.custom-marker-container:active .marker-name-tag {
+  transform: translateX(-50%) scale(0.96);
+}
+
 /* Popup appear animation */
 @keyframes popup-appear {
   from { opacity: 0; transform: translateY(calc(-100% + 8px)); }
