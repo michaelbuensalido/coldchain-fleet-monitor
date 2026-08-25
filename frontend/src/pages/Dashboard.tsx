@@ -73,13 +73,16 @@ export default function Dashboard() {
   // Update live status from socket event
   useEffect(() => {
     if (socketStatus && socketStatus.vehicleId) {
+      const nextStatus = socketStatus.toStatus || socketStatus.status;
+      if (!nextStatus) return;
+
       setLiveStatusMap((prev) => ({
         ...prev,
-        [socketStatus.vehicleId]: socketStatus.status,
+        [socketStatus.vehicleId]: nextStatus,
       }));
 
       // Track when vehicle enters degraded state
-      if (socketStatus.status === 'degraded' && !degradedSinceMap[socketStatus.vehicleId]) {
+      if (nextStatus === 'degraded' && !degradedSinceMap[socketStatus.vehicleId]) {
         setDegradedSinceMap((prev) => ({
           ...prev,
           [socketStatus.vehicleId]: Date.now(),
@@ -87,7 +90,7 @@ export default function Dashboard() {
       }
 
       // Clear degraded timestamp when vehicle recovers
-      if (socketStatus.status !== 'degraded') {
+      if (nextStatus !== 'degraded') {
         setDegradedSinceMap((prev) => {
           const next = { ...prev };
           delete next[socketStatus.vehicleId];

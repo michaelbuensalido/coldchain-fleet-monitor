@@ -40,7 +40,7 @@ const axios_1 = __importDefault(require("axios"));
 const child_process_1 = require("child_process");
 const path = __importStar(require("path"));
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
-const VEHICLE_COUNT = parseInt(process.env.VEHICLE_COUNT || '5', 10); // default to 5 for resource constraint
+const VEHICLE_COUNT = parseInt(process.env.VEHICLE_COUNT || '20', 10); // default to 20 vehicles (5 initial + 15 added)
 const processes = [];
 async function startFleet() {
     console.log(`Initializing fleet of ${VEHICLE_COUNT} simulated vehicles against ${BACKEND_URL}`);
@@ -59,7 +59,7 @@ async function startFleet() {
             name: 'Pharma standard (2-8C)',
             tempMin: 2.0,
             tempMax: 8.0,
-            heartbeatIntervalSecs: 5, // fast checks for lab/sim purposes
+            heartbeatIntervalSecs: 10, // 10 seconds heartbeat interval
         }, { headers: authHeaders });
         const profile = configRes.data;
         console.log(`Created Config Profile: ${profile.id}`);
@@ -67,14 +67,14 @@ async function startFleet() {
         for (let i = 1; i <= VEHICLE_COUNT; i++) {
             const name = `Truck-${String(i).padStart(3, '0')}`;
             console.log(`Registering vehicle: ${name}...`);
-            const vRes = await axios_1.default.post(`${BACKEND_URL}/vehicles`, { name, currentRoute: `Route-${String(100 + i)}` }, { headers: authHeaders });
+            const vRes = await axios_1.default.post(`${BACKEND_URL}/vehicles`, { name, currentRoute: `Route-SG${String(i).padStart(2, '0')}` }, { headers: authHeaders });
             const { vehicle, apiKey } = vRes.data;
             console.log(`Registered vehicle ${vehicle.id}. API key generated.`);
             // Assign config profile to vehicle
             await axios_1.default.post(`${BACKEND_URL}/configs/assign`, { vehicleId: vehicle.id, configProfileId: profile.id }, { headers: authHeaders });
             console.log(`Assigned config profile to vehicle ${vehicle.id}`);
-            // Stagger spawn
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            // Stagger spawn (300ms delay per vehicle)
+            await new Promise((resolve) => setTimeout(resolve, 300));
             const child = (0, child_process_1.fork)(path.join(__dirname, '..', 'dist', 'vehicle.js'), [
                 vehicle.id,
                 apiKey,

@@ -78,7 +78,7 @@ export class TelemetryService {
     if (vehicle.status === 'pending') {
       const tempMin = vehicle.configProfile?.tempMin ?? 2.0;
       const tempMax = vehicle.configProfile?.tempMax ?? 8.0;
-      const heartbeatIntervalMs = (vehicle.configProfile?.heartbeatIntervalSecs ?? 30) * 1000;
+      const heartbeatIntervalMs = (vehicle.configProfile?.heartbeatIntervalSecs ?? 60) * 1000;
 
       const actor = createActor(vehicleHealthMachine, {
         input: {
@@ -134,6 +134,7 @@ export class TelemetryService {
         JSON.stringify({
           vehicleId,
           name: vehicle.name,
+          status: newStatus,
           fromStatus: 'pending',
           toStatus: newStatus,
           reason,

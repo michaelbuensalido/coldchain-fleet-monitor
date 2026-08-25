@@ -68,7 +68,34 @@ interface SidebarProps {
   degradedSinceMap: Record<string, number>;
 }
 
-import { surface, type, icon, severityColor } from "../theme/tokens";
+/* ─── Status stripe colour per status ───────────────────────── */
+const STATUS_STRIPE: Record<string, string> = {
+  online: "var(--color-status-online)",
+  degraded: "var(--color-status-degraded)",
+  offline: "var(--color-status-offline)",
+  pending: "var(--color-border-strong)",
+};
+
+/* ─── Stat chip colours ──────────────────────────────────────── */
+const STAT_CHIPS = [
+  { label: "Online", colorVar: "var(--color-status-online)", key: "online" },
+  {
+    label: "Degraded",
+    colorVar: "var(--color-status-degraded)",
+    key: "degraded",
+  },
+  { label: "Offline", colorVar: "var(--color-status-offline)", key: "offline" },
+  { label: "Pending", colorVar: "var(--color-text-muted)", key: "pending" },
+];
+
+/* ─── Filter chips ───────────────────────────────────────────── */
+const FILTER_OPTS = [
+  "all",
+  "online",
+  "degraded",
+  "offline",
+  "pending",
+] as const;
 
 export default function Sidebar({
   vehicles,
@@ -90,6 +117,12 @@ export default function Sidebar({
   const degradedCount = vehicles.filter((v) => v.status === "degraded").length;
   const offlineCount = vehicles.filter((v) => v.status === "offline").length;
   const pendingCount = vehicles.filter((v) => v.status === "pending").length;
+  const counts: Record<string, number> = {
+    online: onlineCount,
+    degraded: degradedCount,
+    offline: offlineCount,
+    pending: pendingCount,
+  };
   const unacknowledgedAlerts = alerts.filter((a) => !a.acknowledged).length;
 
   const getLatestTelemetry = (vehicleId: string) => {
@@ -104,7 +137,7 @@ export default function Sidebar({
   };
 
   const formatDuration = (seconds: number | null): string => {
-    if (seconds === null) return "N/A";
+    if (seconds === null) return "—";
     if (seconds < 60) return `${seconds}s`;
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
     const hours = Math.floor(seconds / 3600);
@@ -132,69 +165,115 @@ export default function Sidebar({
     profile: ConfigProfile | null | undefined,
   ) => {
     const severity = getTempSeverity(temp, profile);
-    const tone = severity ? severityColor[severity] : null;
-
     let thresholdLabel = "";
     if (temp !== undefined && profile) {
       if (temp > profile.tempMax) {
-        thresholdLabel = `Exceeds max (${profile.tempMax.toFixed(1)}°C)`;
+        thresholdLabel = `Exceeds max (${profile.tempMax.toFixed(1)} °C)`;
       } else if (temp < profile.tempMin) {
-        thresholdLabel = `Below min (${profile.tempMin.toFixed(1)}°C)`;
+        thresholdLabel = `Below min (${profile.tempMin.toFixed(1)} °C)`;
       }
     }
 
+    const severityColor =
+      severity === "severe"
+        ? "var(--color-severity-severe)"
+        : severity === "mild"
+          ? "var(--color-severity-mild)"
+          : "var(--color-text-main)";
+
     return (
       <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <Thermometer size={icon.sm} className="text-blue-400" />
-            <span className={type.label}>Cargo Temp</span>
-          </div>
-          <span className={`${type.data} font-semibold text-xs text-slate-200`}>
-            {temp !== undefined ? `${temp.toFixed(1)}°C` : "N/A"}
-          </span>
-          {severity && tone && (
+        <div className="flex items-center justify-between gap-2">
+          <div
+            className="flex items-center gap-1.5"
+            style={{ color: "var(--color-text-dim)" }}
+          >
+            <Thermometer size={13} style={{ color: "var(--color-accent)" }} />
             <span
-              className={`${type.eyebrow} ${tone.text} ${tone.bg} px-1 py-0.5 rounded normal-case`}
+              className="font-sans text-[10px] font-semibold uppercase tracking-widest"
+              style={{ color: "var(--color-text-muted)" }}
             >
-              {severity}
+              Cargo Temp
             </span>
-          )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span
+              className="font-mono text-xs font-semibold"
+              style={{ color: severityColor }}
+            >
+              {temp !== undefined ? `${temp.toFixed(1)} °C` : "—"}
+            </span>
+            {severity && (
+              <span
+                className="font-mono text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                style={{
+                  color: severityColor,
+                  background:
+                    severity === "severe"
+                      ? "var(--color-severity-severe-dim)"
+                      : "var(--color-severity-mild-dim)",
+                }}
+              >
+                {severity}
+              </span>
+            )}
+          </div>
         </div>
         {thresholdLabel && (
-          <div className={`${type.data} text-[10px] text-slate-600 pl-[18px]`}>
+          <p
+            className="font-mono text-[10px] pl-[22px]"
+            style={{ color: "var(--color-text-muted)" }}
+          >
             {thresholdLabel}
-          </div>
+          </p>
         )}
       </div>
     );
   };
 
-  // Collapsed rail
+  /* ── Collapsed rail ────────────────────────────────────────── */
   if (isCollapsed) {
     return (
       <div
-        className={`absolute top-4 left-[96px] z-10 w-16 h-[calc(100vh-2rem)] ${surface.panel} rounded-2xl flex flex-col items-center py-6 gap-6 shadow-xl transition-all duration-200`}
+        className="absolute top-4 left-[96px] z-10 flex flex-col items-center py-5 gap-5 transition-all duration-200"
+        style={{
+          width: 56,
+          height: "calc(100vh - 2rem)",
+          background: "var(--color-surface-panel)",
+          border: "1px solid var(--color-border-quiet)",
+          backdropFilter: "blur(16px)",
+          borderRadius: 18,
+          boxShadow: "0 8px 32px oklch(0 0 0 / 0.45)",
+        }}
       >
         <button
+          id="sidebar-expand-btn"
           onClick={() => setIsCollapsed(false)}
           aria-label="Expand sidebar"
-          className="p-2.5 bg-slate-900/70 hover:bg-slate-800 border border-slate-700/50 rounded-xl text-slate-300 hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+          className="rounded-xl flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+          style={{
+            width: 36,
+            height: 36,
+            background: "var(--color-paper-2)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-text-dim)",
+          }}
         >
-          <ChevronRight size={icon.md} />
+          <ChevronRight size={15} />
         </button>
 
-        <div className="flex flex-col gap-4 text-center mt-2">
-          {[
-            ["bg-[var(--color-status-online)]", onlineCount],
-            ["bg-[var(--color-status-degraded)]", degradedCount],
-            ["bg-[var(--color-status-offline)]", offlineCount],
-            ["bg-slate-500", pendingCount],
-          ].map(([colorClass, count], i) => (
-            <div key={i} className="flex flex-col items-center gap-1">
-              <span className={`w-2 h-2 rounded-full ${colorClass}`} />
-              <span className={`${type.data} text-[10px] text-slate-500`}>
-                {count}
+        <div className="flex flex-col gap-3.5 items-center">
+          {STAT_CHIPS.map(({ key, colorVar }) => (
+            <div key={key} className="flex flex-col items-center gap-1">
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ background: colorVar }}
+              />
+              <span
+                className="font-mono text-[10px]"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                {counts[key]}
               </span>
             </div>
           ))}
@@ -203,238 +282,418 @@ export default function Sidebar({
     );
   }
 
-  // Expanded sidebar
+  /* ── Expanded sidebar ──────────────────────────────────────── */
   return (
     <div
-      className={`absolute top-4 left-[96px] z-10 w-[380px] h-[calc(100vh-2rem)] ${surface.panel} rounded-2xl flex flex-col shadow-xl transition-all duration-200 overflow-hidden`}
+      className="absolute top-4 left-[96px] z-10 flex flex-col overflow-hidden transition-all duration-200"
+      style={{
+        width: 380,
+        height: "calc(100vh - 2rem)",
+        background: "var(--color-surface-panel)",
+        border: "1px solid var(--color-border-quiet)",
+        backdropFilter: "blur(16px)",
+        borderRadius: 18,
+        boxShadow: "0 8px 32px oklch(0 0 0 / 0.45)",
+      }}
     >
       {/* Header */}
-      <div className="p-4 border-b border-slate-800/70 bg-slate-950/30">
-        <div className="flex items-center justify-between mb-4">
+      <div
+        className="px-4 pt-4 pb-3 flex-shrink-0"
+        style={{
+          borderBottom: "1px solid var(--color-border-quiet)",
+          background: "oklch(0 0 0 / 0.15)",
+        }}
+      >
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
             <img
               src="/logo.png"
               alt="ColdChainIQ"
-              className="w-8 h-8 rounded-lg object-cover"
+              className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
             />
             <div>
-              <h2 className="font-sans text-sm font-bold tracking-wide text-[var(--color-text-main)]">
+              <p
+                className="font-sans text-[9px] font-semibold uppercase tracking-[0.18em]"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                Fleet Monitor
+              </p>
+              <h2
+                className="font-sans text-sm font-bold tracking-tight leading-tight"
+                style={{ color: "var(--color-text-main)" }}
+              >
                 ColdChainIQ
               </h2>
-              <p className={type.eyebrow}>Live fleet telemetry</p>
             </div>
           </div>
           <button
+            id="sidebar-collapse-btn"
             onClick={() => setIsCollapsed(true)}
             aria-label="Collapse sidebar"
-            className="p-1.5 hover:bg-slate-800/60 rounded-lg text-slate-400 hover:text-white transition-colors duration-150 active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+            className="rounded-lg flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+            style={{
+              width: 30,
+              height: 30,
+              background: "transparent",
+              border: "1px solid transparent",
+              color: "var(--color-text-muted)",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "var(--color-paper-3)";
+              (e.currentTarget as HTMLButtonElement).style.borderColor =
+                "var(--color-border)";
+              (e.currentTarget as HTMLButtonElement).style.color =
+                "var(--color-text-main)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "transparent";
+              (e.currentTarget as HTMLButtonElement).style.borderColor =
+                "transparent";
+              (e.currentTarget as HTMLButtonElement).style.color =
+                "var(--color-text-muted)";
+            }}
           >
-            <ChevronLeft size={icon.md} />
+            <ChevronLeft size={14} />
           </button>
         </div>
 
-        {/* Selected Vehicle Detail Header or Search */}
+        {/* Back / Search */}
         {selectedVehicle ? (
-          <div className="flex items-center justify-between">
-            <button
-              onClick={onBack}
-              className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors duration-150 active:scale-[0.96] cursor-pointer text-xs font-sans font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 rounded"
-            >
-              <ArrowLeft size={icon.sm} />
-              <span>Back to fleet</span>
-            </button>
-          </div>
+          <button
+            id="sidebar-back-btn"
+            onClick={onBack}
+            className="flex items-center gap-1.5 rounded cursor-pointer transition-colors duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 font-sans text-xs font-medium"
+            style={{ color: "var(--color-text-dim)" }}
+            onMouseEnter={(e) =>
+              ((e.currentTarget as HTMLButtonElement).style.color =
+                "var(--color-text-main)")
+            }
+            onMouseLeave={(e) =>
+              ((e.currentTarget as HTMLButtonElement).style.color =
+                "var(--color-text-dim)")
+            }
+          >
+            <ArrowLeft size={13} />
+            <span>Back to fleet</span>
+          </button>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
+            {/* Search input */}
             <div className="relative">
               <Search
-                size={icon.sm}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                size={13}
+                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                style={{ color: "var(--color-text-muted)" }}
               />
               <input
+                id="sidebar-search"
                 type="text"
-                placeholder="Filter by vehicle name..."
+                placeholder="Filter vehicles…"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-slate-900/60 border border-slate-800/80 rounded-xl text-[var(--color-text-main)] placeholder-slate-500 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-[border-color,box-shadow] duration-150 font-sans"
+                className="w-full font-sans text-xs transition-all duration-150 focus:outline-none focus:ring-2"
+                style={{
+                  paddingLeft: 32,
+                  paddingRight: 12,
+                  paddingTop: 8,
+                  paddingBottom: 8,
+                  background: "var(--color-paper-2)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: 10,
+                  color: "var(--color-text-main)",
+                  // @ts-ignore
+                  "--tw-ring-color": "var(--color-focus)",
+                }}
               />
             </div>
 
-            {/* Status Filter Chips */}
+            {/* Status filter chips */}
             <div className="flex gap-1.5 flex-wrap">
-              {(
-                ["all", "online", "degraded", "offline", "pending"] as const
-              ).map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => onStatusFilterChange(filter)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-sans font-semibold uppercase tracking-wider transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer ${
-                    statusFilter === filter
-                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/40 shadow-sm"
-                      : "bg-slate-900/40 text-slate-400 border border-slate-800/60 hover:text-slate-200 hover:bg-slate-850/60"
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
+              {FILTER_OPTS.map((filter) => {
+                const active = statusFilter === filter;
+                return (
+                  <button
+                    key={filter}
+                    id={`sidebar-filter-${filter}`}
+                    onClick={() => onStatusFilterChange(filter)}
+                    className="font-mono font-semibold uppercase tracking-widest cursor-pointer transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+                    style={{
+                      fontSize: 9,
+                      padding: "4px 10px",
+                      borderRadius: 8,
+                      background: active
+                        ? "var(--color-accent-dim)"
+                        : "var(--color-paper-2)",
+                      border: `1px solid ${active ? "var(--color-accent-edge)" : "var(--color-border)"}`,
+                      color: active
+                        ? "var(--color-accent)"
+                        : "var(--color-text-muted)",
+                      // @ts-ignore
+                      "--tw-ring-color": "var(--color-focus)",
+                    }}
+                  >
+                    {filter}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
       </div>
 
-      {/* Stats Summary Bar */}
+      {/* Stats bar */}
       {!selectedVehicle && (
-        <div className="px-4 py-3 border-b border-slate-800/70 bg-slate-950/20 grid grid-cols-4 gap-2 text-center">
-          <div>
-            <div className={`${type.data} text-xs font-bold text-emerald-400`}>
-              {onlineCount}
+        <div
+          className="grid grid-cols-4 gap-px flex-shrink-0"
+          style={{
+            borderBottom: "1px solid var(--color-border-quiet)",
+            background: "var(--color-border-quiet)",
+          }}
+        >
+          {STAT_CHIPS.map(({ label, colorVar, key }) => (
+            <div
+              key={key}
+              className="flex flex-col items-center py-2.5 gap-0.5"
+              style={{ background: "var(--color-paper-1)" }}
+            >
+              <span
+                className="font-mono text-sm font-bold"
+                style={{ color: colorVar }}
+              >
+                {counts[key]}
+              </span>
+              <span
+                className="font-sans text-[9px] font-semibold uppercase tracking-[0.14em]"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                {label}
+              </span>
             </div>
-            <div className={type.eyebrow}>Online</div>
-          </div>
-          <div>
-            <div className={`${type.data} text-xs font-bold text-amber-400`}>
-              {degradedCount}
-            </div>
-            <div className={type.eyebrow}>Degraded</div>
-          </div>
-          <div>
-            <div className={`${type.data} text-xs font-bold text-red-400`}>
-              {offlineCount}
-            </div>
-            <div className={type.eyebrow}>Offline</div>
-          </div>
-          <div>
-            <div className={`${type.data} text-xs font-bold text-slate-400`}>
-              {pendingCount}
-            </div>
-            <div className={type.eyebrow}>Pending</div>
-          </div>
+          ))}
         </div>
       )}
 
-      {/* Unresolved Alert Banner Quick Trigger */}
+      {/* Unresolved alert banner */}
       {!selectedVehicle && unacknowledgedAlerts > 0 && onOpenAlerts && (
         <button
+          id="sidebar-alerts-banner"
           onClick={onOpenAlerts}
-          className="mx-3 mt-3 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between text-amber-300 hover:bg-amber-500/20 transition-all cursor-pointer text-left"
+          className="mx-3 mt-3 flex-shrink-0 flex items-center justify-between rounded-xl cursor-pointer transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 text-left"
+          style={{
+            padding: "10px 12px",
+            background: "oklch(0.78 0.17 75 / 0.08)",
+            border: "1px solid oklch(0.78 0.17 75 / 0.25)",
+            color: "var(--color-status-degraded)",
+            // @ts-ignore
+            "--tw-ring-color": "var(--color-focus)",
+          }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.background =
+              "oklch(0.78 0.17 75 / 0.14)")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.background =
+              "oklch(0.78 0.17 75 / 0.08)")
+          }
         >
           <div className="flex items-center gap-2">
-            <AlertTriangle size={14} className="text-amber-400" />
+            <AlertTriangle size={13} />
             <span className="font-mono text-xs font-semibold">
               {unacknowledgedAlerts} unresolved alert
               {unacknowledgedAlerts > 1 ? "s" : ""}
             </span>
           </div>
-          <span className="font-mono text-[10px] uppercase text-amber-400 underline">
+          <span className="font-mono text-[10px] uppercase tracking-wider underline underline-offset-2">
             View
           </span>
         </button>
       )}
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      {/* Main content */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
         {selectedVehicle ? (
-          // Vehicle Detail View
-          <div className="space-y-4">
-            <div className="p-4 bg-slate-900/40 border border-slate-800/80 rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-sans font-bold text-base text-[var(--color-text-main)]">
-                  {selectedVehicle.name}
-                </h3>
-                <StatusBadge status={selectedVehicle.status} />
-              </div>
-
-              {selectedVehicle.status === "degraded" &&
-                degradedSinceMap[selectedVehicle.id] && (
-                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center justify-between text-xs text-amber-300 font-mono">
-                    <span>In degraded state for:</span>
-                    <span className="font-bold">
-                      {formatDuration(
-                        Math.floor(
-                          (Date.now() - degradedSinceMap[selectedVehicle.id]) /
-                            1000,
-                        ),
-                      )}
-                    </span>
-                  </div>
-                )}
-
-              <div className="space-y-2 pt-2 border-t border-slate-800/60">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400 font-sans">Route</span>
-                  <span className={`${type.data} text-slate-200`}>
-                    {selectedVehicle.currentRoute || "Unassigned"}
-                  </span>
+          /* Vehicle detail */
+          <div className="space-y-3">
+            {/* Identity card */}
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "var(--color-paper-2)",
+                border: "1px solid var(--color-border)",
+                borderLeft: `3px solid ${STATUS_STRIPE[selectedVehicle.status] ?? "var(--color-border)"}`,
+              }}
+            >
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3
+                    className="font-sans font-bold text-sm leading-tight"
+                    style={{ color: "var(--color-text-main)" }}
+                  >
+                    {selectedVehicle.name}
+                  </h3>
+                  <StatusBadge status={selectedVehicle.status} />
                 </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400 font-sans">
-                    Config Profile
-                  </span>
-                  <span className={`${type.data} text-slate-200`}>
-                    {selectedVehicle.configProfile?.name || "Standard"}
-                  </span>
-                </div>
-              </div>
 
-              {selectedTelemetry && (
-                <div className="space-y-2.5 pt-3 border-t border-slate-800/60">
-                  {renderTempStats(
-                    selectedTelemetry.temperature,
-                    selectedVehicle.configProfile,
+                {/* Degraded timer */}
+                {selectedVehicle.status === "degraded" &&
+                  degradedSinceMap[selectedVehicle.id] && (
+                    <div
+                      className="flex items-center justify-between rounded-lg font-mono text-xs"
+                      style={{
+                        padding: "8px 12px",
+                        background: "oklch(0.78 0.17 75 / 0.08)",
+                        border: "1px solid oklch(0.78 0.17 75 / 0.20)",
+                        color: "var(--color-status-degraded)",
+                      }}
+                    >
+                      <span>Degraded for</span>
+                      <span className="font-bold">
+                        {formatDuration(
+                          Math.floor(
+                            (Date.now() -
+                              degradedSinceMap[selectedVehicle.id]) /
+                              1000,
+                          ),
+                        )}
+                      </span>
+                    </div>
                   )}
 
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-sans">Position</span>
-                    <span className={`${type.data} text-slate-200 text-[11px]`}>
-                      {selectedTelemetry.latitude.toFixed(4)},{" "}
-                      {selectedTelemetry.longitude.toFixed(4)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-sans">
-                      Door Status
-                    </span>
-                    <span
-                      className={`${type.data} font-semibold ${
-                        selectedTelemetry.doorOpen
-                          ? "text-amber-400"
-                          : "text-emerald-400"
-                      }`}
+                {/* Meta rows */}
+                <div
+                  className="space-y-2 pt-2"
+                  style={{ borderTop: "1px solid var(--color-border-quiet)" }}
+                >
+                  {[
+                    {
+                      label: "Route",
+                      value: selectedVehicle.currentRoute || "Unassigned",
+                    },
+                    {
+                      label: "Config Profile",
+                      value: selectedVehicle.configProfile?.name || "Standard",
+                    },
+                  ].map(({ label, value }) => (
+                    <div
+                      key={label}
+                      className="flex justify-between items-center"
                     >
-                      {selectedTelemetry.doorOpen ? "OPEN" : "CLOSED"}
-                    </span>
-                  </div>
+                      <span
+                        className="font-sans text-xs"
+                        style={{ color: "var(--color-text-dim)" }}
+                      >
+                        {label}
+                      </span>
+                      <span
+                        className="font-mono text-xs"
+                        style={{ color: "var(--color-text-main)" }}
+                      >
+                        {value}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
 
-            {/* Telemetry Reading History */}
-            <div className="space-y-2">
-              <h4 className={type.eyebrow}>Telemetry History</h4>
-              <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                {telemetry.map((t) => (
+                {/* Telemetry rows */}
+                {selectedTelemetry && (
                   <div
-                    key={t.id}
-                    className="p-2.5 bg-slate-900/30 border border-slate-800/60 rounded-xl flex items-center justify-between text-xs font-mono"
+                    className="space-y-2.5 pt-3"
+                    style={{ borderTop: "1px solid var(--color-border-quiet)" }}
                   >
-                    <span className="text-slate-400 text-[11px]">
-                      {new Date(t.timestamp).toLocaleTimeString()}
-                    </span>
-                    <span className="text-slate-200 font-semibold">
-                      {t.temperature.toFixed(1)}°C
-                    </span>
+                    {renderTempStats(
+                      selectedTelemetry.temperature,
+                      selectedVehicle.configProfile,
+                    )}
+                    <div className="flex justify-between items-center">
+                      <span
+                        className="font-sans text-xs flex items-center gap-1.5"
+                        style={{ color: "var(--color-text-dim)" }}
+                      >
+                        <MapPin
+                          size={12}
+                          style={{ color: "var(--color-accent)" }}
+                        />
+                        Position
+                      </span>
+                      <span
+                        className="font-mono text-[11px]"
+                        style={{ color: "var(--color-text-main)" }}
+                      >
+                        {selectedTelemetry.latitude.toFixed(4)},{" "}
+                        {selectedTelemetry.longitude.toFixed(4)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span
+                        className="font-sans text-xs"
+                        style={{ color: "var(--color-text-dim)" }}
+                      >
+                        Door Status
+                      </span>
+                      <span
+                        className="font-mono text-xs font-bold"
+                        style={{
+                          color: selectedTelemetry.doorOpen
+                            ? "var(--color-status-degraded)"
+                            : "var(--color-status-online)",
+                        }}
+                      >
+                        {selectedTelemetry.doorOpen ? "OPEN" : "CLOSED"}
+                      </span>
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             </div>
+
+            {/* Telemetry history */}
+            {telemetry.length > 0 && (
+              <div className="space-y-2">
+                <p
+                  className="font-sans text-[9px] font-semibold uppercase tracking-[0.18em] px-1"
+                  style={{ color: "var(--color-text-muted)" }}
+                >
+                  Telemetry History
+                </p>
+                <div className="space-y-1 max-h-56 overflow-y-auto">
+                  {telemetry.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between rounded-lg px-3 py-2"
+                      style={{
+                        background: "var(--color-paper-2)",
+                        border: "1px solid var(--color-border-quiet)",
+                      }}
+                    >
+                      <span
+                        className="font-mono text-[11px]"
+                        style={{ color: "var(--color-text-muted)" }}
+                      >
+                        {new Date(t.timestamp).toLocaleTimeString()}
+                      </span>
+                      <span
+                        className="font-mono text-xs font-semibold"
+                        style={{ color: "var(--color-text-main)" }}
+                      >
+                        {t.temperature.toFixed(1)} °C
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
-          // Vehicle List
-          <div className="space-y-2">
+          /* Vehicle list */
+          <div className="space-y-1.5">
             {vehicles.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 font-mono text-xs">
-                No vehicles matching filters
+              <div
+                className="py-10 text-center font-mono text-xs"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                No vehicles match the current filter
               </div>
             ) : (
               vehicles.map((vehicle) => {
@@ -442,27 +701,54 @@ export default function Sidebar({
                 return (
                   <button
                     key={vehicle.id}
+                    id={`vehicle-card-${vehicle.id}`}
                     onClick={() => onVehicleSelect(vehicle.id)}
-                    className="w-full p-3 bg-slate-900/40 hover:bg-slate-850/60 border border-slate-800/80 hover:border-slate-700/80 rounded-xl flex items-center justify-between transition-[background-color,border-color,transform] duration-150 active:scale-[0.98] cursor-pointer text-left group"
+                    className="w-full rounded-xl flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 text-left group overflow-hidden"
+                    style={{
+                      padding: "10px 12px",
+                      paddingLeft: 15,
+                      background: "var(--color-paper-2)",
+                      border: `1px solid var(--color-border)`,
+
+                      // @ts-ignore
+                      "--tw-ring-color": "var(--color-focus)",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background =
+                        "var(--color-paper-3)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background =
+                        "var(--color-paper-2)";
+                    }}
                   >
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-sans font-semibold text-xs text-[var(--color-text-main)] group-hover:text-blue-400 transition-colors">
+                        <span
+                          className="font-sans font-semibold text-xs truncate transition-colors duration-150"
+                          style={{ color: "var(--color-text-main)" }}
+                        >
                           {vehicle.name}
                         </span>
                         <StatusBadge status={vehicle.status} />
                       </div>
-                      <div className="flex items-center gap-3 text-[11px] text-slate-500 font-mono">
+                      <div
+                        className="flex items-center gap-3 font-mono text-[11px]"
+                        style={{ color: "var(--color-text-muted)" }}
+                      >
                         {vehicle.currentRoute && (
-                          <span className="flex items-center gap-1">
-                            <MapPin size={icon.xs} />
+                          <span className="flex items-center gap-1 truncate">
+                            <MapPin size={10} />
                             {vehicle.currentRoute}
                           </span>
                         )}
                         {latestTel && (
-                          <span className="flex items-center gap-1 text-slate-400">
-                            <Thermometer size={icon.xs} />
-                            {latestTel.temperature.toFixed(1)}°C
+                          <span className="flex items-center gap-1 flex-shrink-0">
+                            <Thermometer
+                              size={10}
+                              style={{ color: "var(--color-accent)" }}
+                            />
+                            {latestTel.temperature.toFixed(1)} °C
                           </span>
                         )}
                       </div>
@@ -470,7 +756,10 @@ export default function Sidebar({
 
                     {vehicle.status === "degraded" &&
                       degradedSinceMap[vehicle.id] && (
-                        <span className="font-mono text-[12px] text-amber-400 px-2 py-1 rounded ">
+                        <span
+                          className="font-mono text-[11px] font-semibold flex-shrink-0 ml-2"
+                          style={{ color: "var(--color-status-degraded)" }}
+                        >
                           {formatDuration(
                             Math.floor(
                               (Date.now() - degradedSinceMap[vehicle.id]) /

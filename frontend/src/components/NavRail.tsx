@@ -37,6 +37,21 @@ interface NavRailProps {
   onLogout: () => void;
 }
 
+type NavId = "live" | "alerts" | "history" | "config" | "provision";
+
+const NAV_ITEMS: {
+  id: NavId;
+  icon: React.ComponentType<{ size: number; strokeWidth: number }>;
+  label: string;
+  title: string;
+}[] = [
+  { id: "live",      icon: Radio,      label: "Live",      title: "Live Fleet Overview" },
+  { id: "alerts",    icon: Bell,       label: "Alerts",    title: "Live Fleet Alerts" },
+  { id: "history",   icon: Clock,      label: "History",   title: "Event Audit History" },
+  { id: "config",    icon: Sliders,    label: "Config",    title: "Manage Config Profiles" },
+  { id: "provision", icon: PlusCircle, label: "Provision", title: "Provision New Vehicle" },
+];
+
 export default function NavRail({
   activePanel,
   onPanelChange,
@@ -45,8 +60,8 @@ export default function NavRail({
 }: NavRailProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const unacknowledgedAlerts = alerts.filter((a) => !a.acknowledged).length;
+  const isLiveActive = activePanel === null || activePanel === "live";
 
-  // Keyboard navigation & Esc key handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && activePanel !== null) {
@@ -57,24 +72,20 @@ export default function NavRail({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activePanel, onPanelChange]);
 
-  const togglePanel = (
-    panel: "alerts" | "history" | "config" | "provision",
-  ) => {
-    if (activePanel === panel) {
-      onPanelChange(null);
-    } else {
-      onPanelChange(panel);
-    }
+  const togglePanel = (panel: Exclude<NavRailPanel, "live" | null>) => {
+    onPanelChange(activePanel === panel ? null : panel);
   };
 
-  const isLiveActive = activePanel === null || activePanel === "live";
+  const isActive = (id: NavId) =>
+    id === "live" ? isLiveActive : activePanel === id;
 
   return (
     <>
-      {/* Click-outside backdrop when panel is open */}
+      {/* Backdrop */}
       {activePanel !== null && activePanel !== "live" && (
         <div
-          className="fixed inset-0 z-20 bg-slate-950/25 backdrop-blur-[2px] transition-opacity duration-150"
+          className="fixed inset-0 z-20 transition-opacity duration-200"
+          style={{ background: "var(--color-surface-scrim)", backdropFilter: "blur(2px)" }}
           onClick={() => onPanelChange(null)}
         />
       )}
@@ -82,12 +93,23 @@ export default function NavRail({
       {/* Vertical Icon Rail */}
       <nav
         aria-label="Primary navigation rail"
-        className="fixed top-4 left-4 z-30 w-[72px] h-[calc(100vh-2rem)] bg-[var(--color-surface-panel)] border border-[var(--color-border-quiet)] backdrop-blur-md rounded-2xl flex flex-col items-center py-5 shadow-2xl"
+        className="fixed top-4 left-4 z-30 flex flex-col items-center py-5"
+        style={{
+          width: 72,
+          height: "calc(100vh - 2rem)",
+          background: "var(--color-surface-panel)",
+          border: "1px solid var(--color-border-quiet)",
+          backdropFilter: "blur(16px)",
+          borderRadius: 18,
+          boxShadow: "0 8px 32px oklch(0 0 0 / 0.5), 0 0 0 1px oklch(1 0 0 / 0.04)",
+        }}
       >
-        {/* Logo / Brand Indicator */}
+        {/* Logo */}
         <button
+          id="nav-logo-btn"
           onClick={() => onPanelChange(null)}
-          className="w-12 h-12 rounded-xl overflow-hidden mb-5 flex items-center justify-center select-none cursor-pointer   active:scale-[0.96] transition-transform duration-150"
+          className="mb-5 rounded-xl overflow-hidden flex-shrink-0 transition-transform duration-150 active:scale-95 cursor-pointer"
+          style={{ width: 44, height: 44 }}
           title="ColdChainIQ Fleet Monitor"
         >
           <img
@@ -97,103 +119,104 @@ export default function NavRail({
           />
         </button>
 
-        {/* Main Navigation Buttons */}
-        <div className="flex-1 flex flex-col gap-3.5 items-center w-full px-2">
-          {/* 1. Live Overview */}
-          <button
-            onClick={() => onPanelChange(null)}
-            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer relative group ${
-              isLiveActive
-                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]"
-                : "bg-slate-900/40 hover:bg-slate-800/70 border border-slate-800/80 text-slate-400 hover:text-slate-200"
-            }`}
-            title="Live Fleet Overview"
-          >
-            <Radio size={18} strokeWidth={2} />
-            <span className="text-[9px] font-mono font-semibold tracking-wider uppercase">
-              Live
-            </span>
-          </button>
-
-          {/* 2. Alerts */}
-          <button
-            onClick={() => togglePanel("alerts")}
-            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer relative group ${
-              activePanel === "alerts"
-                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]"
-                : "bg-slate-900/40 hover:bg-slate-800/70 border border-slate-800/80 text-slate-400 hover:text-slate-200"
-            }`}
-            title="Live Fleet Alerts"
-          >
-            <div className="relative">
-              <Bell size={18} strokeWidth={2} />
-              {unacknowledgedAlerts > 0 && (
-                <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold font-mono rounded-full flex items-center justify-center shadow-md animate-pulse">
-                  {unacknowledgedAlerts}
+        {/* Nav buttons */}
+        <div className="flex-1 flex flex-col gap-2.5 items-center w-full px-2">
+          {NAV_ITEMS.map(({ id, icon: Icon, label, title }) => {
+            const active = isActive(id);
+            return (
+              <button
+                key={id}
+                id={`nav-btn-${id}`}
+                onClick={() =>
+                  id === "live"
+                    ? onPanelChange(null)
+                    : togglePanel(id as Exclude<NavRailPanel, "live" | null>)
+                }
+                title={title}
+                className="relative w-full rounded-xl flex flex-col items-center gap-1 cursor-pointer transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+                style={{
+                  padding: "10px 0",
+                  background: active
+                    ? "var(--color-accent-dim)"
+                    : "oklch(0.16 0.022 240 / 0.50)",
+                  border: active
+                    ? "1px solid var(--color-accent-edge)"
+                    : "1px solid var(--color-border-quiet)",
+                  color: active
+                    ? "var(--color-accent)"
+                    : "var(--color-text-dim)",
+                  boxShadow: active
+                    ? "0 0 14px var(--color-accent-glow), inset 3px 0 0 var(--color-accent)"
+                    : "none",
+                  transform: active ? "none" : undefined,
+                  // @ts-ignore
+                  "--tw-ring-color": "var(--color-focus)",
+                }}
+              >
+                <div className="relative">
+                  <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />
+                  {id === "alerts" && unacknowledgedAlerts > 0 && (
+                    <span
+                      className="absolute flex items-center justify-center font-mono font-bold dot-online"
+                      style={{
+                        top: -6,
+                        right: -8,
+                        minWidth: 15,
+                        height: 15,
+                        padding: "0 3px",
+                        fontSize: 9,
+                        borderRadius: 8,
+                        background: "var(--color-status-offline)",
+                        color: "var(--color-text-main)",
+                        lineHeight: 1,
+                      }}
+                    >
+                      {unacknowledgedAlerts}
+                    </span>
+                  )}
+                </div>
+                <span
+                  className="font-mono font-semibold tracking-widest uppercase"
+                  style={{ fontSize: 8 }}
+                >
+                  {label}
                 </span>
-              )}
-            </div>
-            <span className="text-[9px] font-mono font-semibold tracking-wider uppercase">
-              Alerts
-            </span>
-          </button>
-
-          {/* 3. History */}
-          <button
-            onClick={() => togglePanel("history")}
-            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer relative group ${
-              activePanel === "history"
-                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]"
-                : "bg-slate-900/40 hover:bg-slate-800/70 border border-slate-800/80 text-slate-400 hover:text-slate-200"
-            }`}
-            title="Event Audit History"
-          >
-            <Clock size={18} strokeWidth={2} />
-            <span className="text-[9px] font-mono font-semibold tracking-wider uppercase">
-              History
-            </span>
-          </button>
-
-          {/* 4. Config */}
-          <button
-            onClick={() => togglePanel("config")}
-            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer relative group ${
-              activePanel === "config"
-                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]"
-                : "bg-slate-900/40 hover:bg-slate-800/70 border border-slate-800/80 text-slate-400 hover:text-slate-200"
-            }`}
-            title="Manage Config Profiles"
-          >
-            <Sliders size={18} strokeWidth={2} />
-            <span className="text-[9px] font-mono font-semibold tracking-wider uppercase">
-              Config
-            </span>
-          </button>
-
-          {/* 5. Provision */}
-          <button
-            onClick={() => togglePanel("provision")}
-            className={`w-full py-2.5 rounded-xl flex flex-col items-center gap-1 transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer relative group ${
-              activePanel === "provision"
-                ? "bg-blue-600/20 border border-blue-500/50 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]"
-                : "bg-slate-900/40 hover:bg-slate-800/70 border border-slate-800/80 text-slate-400 hover:text-slate-200"
-            }`}
-            title="Provision New Vehicle"
-          >
-            <PlusCircle size={18} strokeWidth={2} />
-            <span className="text-[9px] font-mono font-semibold tracking-wider uppercase">
-              Provision
-            </span>
-          </button>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Logout at bottom */}
+        {/* Logout */}
         <button
+          id="nav-btn-logout"
           onClick={onLogout}
-          className="w-10 h-10 rounded-xl bg-slate-900/40 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/30 text-slate-500 hover:text-red-400 flex items-center justify-center transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer"
           title="Logout"
+          className="rounded-xl flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+          style={{
+            width: 40,
+            height: 40,
+            background: "oklch(0.16 0.022 240 / 0.50)",
+            border: "1px solid var(--color-border-quiet)",
+            color: "var(--color-text-muted)",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background =
+              "oklch(0.62 0.22 25 / 0.10)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor =
+              "oklch(0.62 0.22 25 / 0.30)";
+            (e.currentTarget as HTMLButtonElement).style.color =
+              "var(--color-status-offline)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background =
+              "oklch(0.16 0.022 240 / 0.50)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor =
+              "var(--color-border-quiet)";
+            (e.currentTarget as HTMLButtonElement).style.color =
+              "var(--color-text-muted)";
+          }}
         >
-          <LogOut size={16} strokeWidth={2} />
+          <LogOut size={15} strokeWidth={1.8} />
         </button>
       </nav>
 
@@ -203,24 +226,32 @@ export default function NavRail({
           ref={panelRef}
           role="dialog"
           aria-modal="true"
-          className="fixed top-4 left-[96px] z-30 w-[420px] h-[calc(100vh-2rem)] bg-[var(--color-surface-panel)] border border-[var(--color-border-quiet)] backdrop-blur-md rounded-2xl flex flex-col shadow-2xl overflow-hidden transition-all duration-150"
+          className="fixed z-30 flex flex-col overflow-hidden panel-enter"
+          style={{
+            top: 16,
+            left: 96,
+            width: 420,
+            height: "calc(100vh - 2rem)",
+            background: "var(--color-surface-panel)",
+            border: "1px solid var(--color-border-quiet)",
+            backdropFilter: "blur(20px)",
+            borderRadius: 18,
+            boxShadow:
+              "0 8px 40px oklch(0 0 0 / 0.55), 0 0 0 1px oklch(1 0 0 / 0.04)",
+          }}
         >
-          {/* Panel content switcher */}
           {activePanel === "alerts" && (
             <AlertsPanelContent
               alerts={alerts}
               onClose={() => onPanelChange(null)}
             />
           )}
-
           {activePanel === "history" && (
             <HistoryPanelContent onClose={() => onPanelChange(null)} />
           )}
-
           {activePanel === "config" && (
             <ConfigContent onClose={() => onPanelChange(null)} />
           )}
-
           {activePanel === "provision" && (
             <ProvisionContent onClose={() => onPanelChange(null)} />
           )}

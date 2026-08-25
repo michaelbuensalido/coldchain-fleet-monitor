@@ -1,13 +1,20 @@
-import { useEffect, useRef } from 'react';
-import { X, AlertTriangle, Check } from 'lucide-react';
-import { useAcknowledgeAlert, useAcknowledgeAllAlerts } from '../hooks/useAlerts';
+import { useEffect, useRef } from "react";
+import { X, AlertTriangle, Check } from "lucide-react";
+import {
+  useAcknowledgeAlert,
+  useAcknowledgeAllAlerts,
+} from "../hooks/useAlerts";
 
 interface Alert {
   id: string;
   vehicleId: string;
   vehicle: { id: string; name: string };
-  severity: 'info' | 'warning' | 'critical';
-  type: 'status_change' | 'temperature_excursion' | 'connectivity_loss' | string;
+  severity: "info" | "warning" | "critical";
+  type:
+    | "status_change"
+    | "temperature_excursion"
+    | "connectivity_loss"
+    | string;
   message: string;
   acknowledged: boolean;
   acknowledgedAt: string | null;
@@ -22,33 +29,49 @@ interface AlertsPanelProps {
   triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
-const getSeverityColor = (severity: string) => {
-  switch (severity) {
-    case 'critical':
-      return 'text-red-400 bg-red-950/40 border-red-500/30';
-    case 'warning':
-      return 'text-amber-400 bg-amber-950/40 border-amber-500/30';
-    case 'info':
-      return 'text-blue-400 bg-blue-950/40 border-blue-500/30';
-    default:
-      return 'text-slate-400 bg-slate-900/40 border-slate-800';
-  }
-};
+/* ─── Severity visual config ─────────────────────────────────── */
+const SEVERITY_CFG = {
+  critical: {
+    stripe: "var(--color-status-offline)",
+    dot: "var(--color-status-offline)",
+    badge: {
+      color: "var(--color-status-offline)",
+      bg: "oklch(0.62 0.22 25 / 0.14)",
+      border: "oklch(0.62 0.22 25 / 0.30)",
+    },
+    label: "Critical",
+  },
+  warning: {
+    stripe: "var(--color-status-degraded)",
+    dot: "var(--color-status-degraded)",
+    badge: {
+      color: "var(--color-status-degraded)",
+      bg: "oklch(0.78 0.17 75 / 0.14)",
+      border: "oklch(0.78 0.17 75 / 0.30)",
+    },
+    label: "Warning",
+  },
+  info: {
+    stripe: "var(--color-accent)",
+    dot: "var(--color-accent)",
+    badge: {
+      color: "var(--color-accent)",
+      bg: "var(--color-accent-dim)",
+      border: "var(--color-accent-edge)",
+    },
+    label: "Info",
+  },
+} as const;
 
-const getSeverityDot = (severity: string) => {
-  switch (severity) {
-    case 'critical':
-      return 'bg-red-500 shadow-[0_0_8px_#ef4444]';
-    case 'warning':
-      return 'bg-amber-500 shadow-[0_0_8px_#f59e0b]';
-    default:
-      return 'bg-blue-500 shadow-[0_0_8px_#3b82f6]';
-  }
-};
+function cfg(severity: string) {
+  return (
+    SEVERITY_CFG[severity as keyof typeof SEVERITY_CFG] ?? SEVERITY_CFG.info
+  );
+}
 
 /**
- * Standalone alerts content — used both inside the legacy modal wrapper
- * and inside the NavRail adjacent panel.
+ * Standalone alerts content — used inside the NavRail adjacent panel
+ * and inside the legacy modal wrapper.
  */
 export function AlertsPanelContent({
   alerts,
@@ -59,90 +82,217 @@ export function AlertsPanelContent({
 }) {
   const acknowledgeAlert = useAcknowledgeAlert();
   const acknowledgeAll = useAcknowledgeAllAlerts();
-  const unresolvedCount = alerts.filter((alert) => !alert.acknowledged).length;
+  const unresolvedCount = alerts.filter((a) => !a.acknowledged).length;
 
   return (
     <>
       {/* Header */}
-      <div className="p-4 border-b border-[var(--color-border-quiet)] bg-slate-950/20 flex justify-between items-center">
+      <div
+        className="flex items-center justify-between flex-shrink-0"
+        style={{
+          padding: "14px 16px",
+          borderBottom: "1px solid var(--color-border-quiet)",
+          background: "oklch(0 0 0 / 0.15)",
+        }}
+      >
         <div className="flex items-center gap-2">
-          <AlertTriangle className="text-amber-500" size={18} />
-          <h2 className="text-sm font-semibold tracking-wider text-[var(--color-text-main)] uppercase font-mono">
+          <AlertTriangle
+            size={15}
+            style={{ color: "var(--color-status-degraded)" }}
+          />
+          <h2
+            className="font-mono font-semibold uppercase tracking-widest"
+            style={{ fontSize: 11, color: "var(--color-text-main)" }}
+          >
             Live Fleet Alerts
           </h2>
+          {unresolvedCount > 0 && (
+            <span
+              className="font-mono font-bold"
+              style={{
+                fontSize: 9,
+                padding: "2px 6px",
+                borderRadius: 6,
+                background: "var(--color-status-offline-dim)",
+                border: "1px solid var(--color-status-offline-edge)",
+                color: "var(--color-status-offline)",
+              }}
+            >
+              {unresolvedCount}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {unresolvedCount > 0 && (
             <button
+              id="alerts-resolve-all-btn"
               onClick={() => acknowledgeAll.mutate()}
               disabled={acknowledgeAll.isPending}
-              className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-[10px] font-mono uppercase text-slate-300 hover:text-green-400 rounded-lg transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] cursor-pointer disabled:opacity-50"
+              className="font-mono font-semibold uppercase tracking-wider cursor-pointer transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-40"
+              style={{
+                fontSize: 9,
+                padding: "5px 10px",
+                borderRadius: 8,
+                background: "var(--color-accent-dim)",
+                border: "1px solid var(--color-accent-edge)",
+                color: "var(--color-accent)",
+                // @ts-ignore
+                "--tw-ring-color": "var(--color-focus)",
+              }}
             >
-              {acknowledgeAll.isPending ? 'Resolving…' : 'Resolve all'}
+              {acknowledgeAll.isPending ? "Resolving…" : "Resolve all"}
             </button>
           )}
           <button
+            id="alerts-close-btn"
             onClick={onClose}
-            aria-label="Close panel"
-            className="p-1.5 hover:bg-slate-800/60 rounded-lg text-slate-400 hover:text-white transition-colors duration-150 active:scale-[0.96] cursor-pointer"
+            aria-label="Close alerts panel"
+            className="rounded-lg flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+            style={{
+              width: 28,
+              height: 28,
+              background: "transparent",
+              border: "1px solid transparent",
+              color: "var(--color-text-muted)",
+              // @ts-ignore
+              "--tw-ring-color": "var(--color-focus)",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "var(--color-paper-3)";
+              (e.currentTarget as HTMLButtonElement).style.borderColor =
+                "var(--color-border)";
+              (e.currentTarget as HTMLButtonElement).style.color =
+                "var(--color-text-main)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "transparent";
+              (e.currentTarget as HTMLButtonElement).style.borderColor =
+                "transparent";
+              (e.currentTarget as HTMLButtonElement).style.color =
+                "var(--color-text-muted)";
+            }}
           >
-            <X size={18} />
+            <X size={14} />
           </button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {alerts.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 font-mono text-xs">
-            No alerts currently recorded
+          <div
+            className="py-12 text-center font-mono text-xs"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            No alerts recorded
           </div>
         ) : (
-          alerts.map((alert) => (
-            <div
-              key={alert.id}
-              className={`p-3 bg-slate-900/30 border rounded-xl relative group transition-all ${
-                !alert.acknowledged
-                  ? 'border-red-500/20 bg-red-950/5'
-                  : 'border-slate-850 bg-slate-900/10'
-              }`}
-            >
-              {!alert.acknowledged && (
-                <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl bg-red-500 opacity-80" />
-              )}
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1.5 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${getSeverityDot(alert.severity)}`} />
-                    <span className="font-semibold text-xs font-mono text-[var(--color-text-main)]">
-                      {alert.vehicle?.name || 'Unknown Vehicle'}
-                    </span>
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border ${getSeverityColor(alert.severity)}`}
+          alerts.map((alert) => {
+            const c = cfg(alert.severity);
+            return (
+              <div
+                key={alert.id}
+                className="rounded-xl overflow-hidden transition-opacity duration-150"
+                style={{
+                  opacity: alert.acknowledged ? 0.45 : 1,
+                  background: "var(--color-paper-2)",
+                  border: `1px solid var(--color-border)`,
+                }}
+              >
+                <div className="flex items-start gap-3 p-3 pl-4">
+                  <div className="flex-1 space-y-1.5 min-w-0">
+                    {/* Vehicle + severity badge */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ background: c.dot }}
+                      />
+                      <span
+                        className="font-mono font-semibold text-xs"
+                        style={{ color: "var(--color-text-main)" }}
+                      >
+                        {alert.vehicle?.name || "Unknown Vehicle"}
+                      </span>
+                      <span
+                        className="font-mono font-bold uppercase tracking-wider"
+                        style={{
+                          fontSize: 9,
+                          padding: "2px 6px",
+                          borderRadius: 5,
+                          color: c.badge.color,
+                          background: c.badge.bg,
+                          border: `1px solid ${c.badge.border}`,
+                          textDecoration: alert.acknowledged
+                            ? "line-through"
+                            : "none",
+                        }}
+                      >
+                        {c.label}
+                      </span>
+                    </div>
+                    {/* Message */}
+                    <p
+                      className="font-mono text-xs leading-relaxed"
+                      style={{ color: "var(--color-text-dim)" }}
                     >
-                      {alert.severity}
-                    </span>
+                      {alert.message}
+                    </p>
+                    {/* Timestamp */}
+                    <p
+                      className="font-mono"
+                      style={{ fontSize: 10, color: "var(--color-text-muted)" }}
+                    >
+                      {new Date(alert.createdAt).toLocaleString()}
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-300 font-mono leading-relaxed">
-                    {alert.message}
-                  </p>
-                  <div className="text-[10px] text-slate-500 font-mono">
-                    {new Date(alert.createdAt).toLocaleString()}
-                  </div>
+
+                  {/* Acknowledge button */}
+                  {!alert.acknowledged && (
+                    <button
+                      id={`alert-ack-btn-${alert.id}`}
+                      onClick={() => acknowledgeAlert.mutate(alert.id)}
+                      disabled={acknowledgeAlert.isPending}
+                      aria-label="Acknowledge alert"
+                      className="rounded-lg flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 disabled:opacity-40 flex-shrink-0"
+                      style={{
+                        width: 28,
+                        height: 28,
+                        background: "var(--color-paper-3)",
+                        border: "1px solid var(--color-border)",
+                        color: "var(--color-text-muted)",
+                        // @ts-ignore
+                        "--tw-ring-color": "var(--color-focus)",
+                      }}
+                      onMouseEnter={(e) => {
+                        (
+                          e.currentTarget as HTMLButtonElement
+                        ).style.background = "oklch(0.72 0.18 155 / 0.12)";
+                        (
+                          e.currentTarget as HTMLButtonElement
+                        ).style.borderColor = "var(--color-status-online-edge)";
+                        (e.currentTarget as HTMLButtonElement).style.color =
+                          "var(--color-status-online)";
+                      }}
+                      onMouseLeave={(e) => {
+                        (
+                          e.currentTarget as HTMLButtonElement
+                        ).style.background = "var(--color-paper-3)";
+                        (
+                          e.currentTarget as HTMLButtonElement
+                        ).style.borderColor = "var(--color-border)";
+                        (e.currentTarget as HTMLButtonElement).style.color =
+                          "var(--color-text-muted)";
+                      }}
+                    >
+                      <Check size={13} />
+                    </button>
+                  )}
                 </div>
-                {!alert.acknowledged && (
-                  <button
-                    onClick={() => acknowledgeAlert.mutate(alert.id)}
-                    disabled={acknowledgeAlert.isPending}
-                    aria-label="Acknowledge alert"
-                    className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-green-400 rounded-lg transition-all cursor-pointer flex items-center justify-center disabled:opacity-50"
-                  >
-                    <Check size={14} />
-                  </button>
-                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </>
@@ -151,55 +301,61 @@ export function AlertsPanelContent({
 
 /**
  * Legacy modal wrapper — kept for backward compatibility.
- * In the new layout the NavRail renders AlertsPanelContent directly.
  */
-export default function AlertsPanel({ isOpen, onClose, alerts, triggerRef }: AlertsPanelProps) {
+export default function AlertsPanel({
+  isOpen,
+  onClose,
+  alerts,
+  triggerRef,
+}: AlertsPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Focus trapping and management
   useEffect(() => {
     if (isOpen) {
-      const focusableElements = panelRef.current?.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      const focusable = panelRef.current?.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
       );
-      if (focusableElements && focusableElements.length > 0) {
-        (focusableElements[0] as HTMLElement).focus();
-      }
+      focusable?.[0]?.focus();
     } else {
       triggerRef.current?.focus();
     }
   }, [isOpen, triggerRef]);
 
-  // Handle escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
+      if (e.key === "Escape") onClose();
     };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    if (isOpen) window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
     <>
-      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40 transition-opacity duration-300"
+        className="fixed inset-0 z-40 transition-opacity duration-200"
+        style={{
+          background: "var(--color-surface-scrim)",
+          backdropFilter: "blur(3px)",
+        }}
         onClick={onClose}
       />
-
-      {/* Slide-in drawer */}
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label="Alerts log"
-        className="fixed top-4 right-4 z-50 w-[450px] h-[calc(100vh-2rem)] bg-[var(--color-surface-panel)] border border-[var(--color-border-quiet)] backdrop-blur-md rounded-2xl flex flex-col shadow-2xl transition-all duration-300 overflow-hidden"
+        className="fixed top-4 right-4 z-50 flex flex-col overflow-hidden panel-enter"
+        style={{
+          width: 450,
+          height: "calc(100vh - 2rem)",
+          background: "var(--color-surface-panel)",
+          border: "1px solid var(--color-border-quiet)",
+          backdropFilter: "blur(20px)",
+          borderRadius: 18,
+          boxShadow: "0 8px 40px oklch(0 0 0 / 0.55)",
+        }}
       >
         <AlertsPanelContent alerts={alerts} onClose={onClose} />
       </div>

@@ -20,7 +20,7 @@ export function ConfigContent({ onClose }: { onClose?: () => void }) {
     name: '',
     tempMin: 2.0,
     tempMax: 8.0,
-    heartbeatIntervalSecs: 30,
+    heartbeatIntervalSecs: 60,
   });
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [selectedConfigId, setSelectedConfigId] = useState('');
@@ -30,7 +30,7 @@ export function ConfigContent({ onClose }: { onClose?: () => void }) {
     createConfig.mutate(newConfig, {
       onSuccess: () => {
         setShowCreateForm(false);
-        setNewConfig({ name: '', tempMin: 2.0, tempMax: 8.0, heartbeatIntervalSecs: 30 });
+        setNewConfig({ name: '', tempMin: 2.0, tempMax: 8.0, heartbeatIntervalSecs: 60 });
       },
     });
   };
