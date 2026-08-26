@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-const API_BASE = 'http://localhost:3000';
+import { API_BASE } from '../config';
 
 export interface StatusEvent {
   id: string;

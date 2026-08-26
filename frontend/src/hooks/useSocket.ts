@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { SOCKET_URL } from '../config';
 
 export function useSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -7,7 +8,7 @@ export function useSocket() {
   const [status, setStatus] = useState<any>(null);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:3000');
+    const newSocket = io(SOCKET_URL);
     setSocket(newSocket);
 
     newSocket.on('vehicle:telemetry', (data) => {
