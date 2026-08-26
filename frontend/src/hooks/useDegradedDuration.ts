@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-
-const API_BASE = 'http://localhost:3000';
+import { API_BASE } from '../config';
 
 interface StatusEvent {
   id: string;

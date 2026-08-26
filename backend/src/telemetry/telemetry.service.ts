@@ -46,33 +46,37 @@ export class TelemetryService {
     const redisClient = this.redis.getClient();
     const now = Date.now().toString();
 
-    // Store last seen timestamp
-    await redisClient.set(`vehicle:${vehicleId}:lastSeen`, now);
+    try {
+      // Store last seen timestamp
+      await redisClient.set(`vehicle:${vehicleId}:lastSeen`, now);
 
-    // Keep latest telemetry reading details cached in Redis for fast access
-    await redisClient.set(
-      `vehicle:${vehicleId}:latest`,
-      JSON.stringify({
-        temperature: data.temperature,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        doorOpen: data.doorOpen,
-        timestamp: now,
-      }),
-    );
+      // Keep latest telemetry reading details cached in Redis for fast access
+      await redisClient.set(
+        `vehicle:${vehicleId}:latest`,
+        JSON.stringify({
+          temperature: data.temperature,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          doorOpen: data.doorOpen,
+          timestamp: now,
+        }),
+      );
 
-    // Publish telemetry update event
-    await redisClient.publish(
-      'vehicle:telemetry',
-      JSON.stringify({
-        vehicleId,
-        temperature: data.temperature,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        doorOpen: data.doorOpen,
-        timestamp: new Date().toISOString(),
-      }),
-    );
+      // Publish telemetry update event
+      await redisClient.publish(
+        'vehicle:telemetry',
+        JSON.stringify({
+          vehicleId,
+          temperature: data.temperature,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          doorOpen: data.doorOpen,
+          timestamp: new Date().toISOString(),
+        }),
+      );
+    } catch (err: any) {
+      // Non-fatal warning if Redis cache is temporarily down
+    }
 
     // 3. Handle pending -> online status transition
     if (vehicle.status === 'pending') {

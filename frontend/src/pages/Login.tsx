@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import WelcomeShader from "../components/WelcomeShader";
+import { API_BASE } from "../config";
 
 interface LoginResponse {
   access_token: string;
 }
 
 async function login(email: string, password: string): Promise<LoginResponse> {
-  const response = await fetch("http://localhost:3000/auth/login", {
+  const response = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
