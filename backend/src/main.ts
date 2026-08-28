@@ -8,23 +8,37 @@ import { createHash } from 'crypto';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: [
-      'https://coldchain-frontend.mangoground-0325b43c.eastasia.azurecontainerapps.io',
-      'http://localhost:5173', // Local Vite dev server
-      'http://localhost:3000',
-    ],
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+        origin.endsWith('.azurecontainerapps.io')
+      ) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+    ],
   });
 
   const prisma = app.get(PrismaService);
   const redis = app.get(RedisService);
   const redisClient = redis.getClient();
 
-  // Seed default admin if none exists
-  const adminCount = await prisma.adminUser.count();
-  if (adminCount === 0) {
+  // Seed default admin if missing
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { email: 'admin@coldchain.com' },
+  });
+  if (!adminUser) {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash('adminpassword', salt);
     await prisma.adminUser.create({
@@ -54,7 +68,7 @@ async function bootstrap() {
     });
   }
 
-  // Seed/Position 20 trucks in Singapore
+  // Seed/Position 5 trucks in Singapore (Truck-001 to Truck-005)
   const SEED_TRUCKS = [
     {
       name: 'Truck-001',
@@ -96,127 +110,20 @@ async function bootstrap() {
       temp: 5.1,
       status: 'online',
     },
-    {
-      name: 'Truck-006',
-      route: 'Route-SG06 (Central Business Express)',
-      lat: 1.282,
-      lng: 103.858,
-      temp: 4.0,
-      status: 'online',
-    },
-    {
-      name: 'Truck-007',
-      route: 'Route-SG07 (Ang Mo Kio Industrial Link)',
-      lat: 1.375,
-      lng: 103.849,
-      temp: 3.6,
-      status: 'online',
-    },
-    {
-      name: 'Truck-008',
-      route: 'Route-SG08 (Tampines East Hub)',
-      lat: 1.353,
-      lng: 103.945,
-      temp: 11.4,
-      status: 'degraded',
-    },
-    {
-      name: 'Truck-009',
-      route: 'Route-SG09 (Clementi Freight Corridor)',
-      lat: 1.315,
-      lng: 103.765,
-      temp: 4.8,
-      status: 'online',
-    },
-    {
-      name: 'Truck-010',
-      route: 'Route-SG10 (Kranji Agricultural Line)',
-      lat: 1.425,
-      lng: 103.755,
-      temp: 4.1,
-      status: 'online',
-    },
-    {
-      name: 'Truck-011',
-      route: 'Route-SG11 (Seletar Aero Cargo)',
-      lat: 1.412,
-      lng: 103.868,
-      temp: 3.9,
-      status: 'online',
-    },
-    {
-      name: 'Truck-012',
-      route: 'Route-SG12 (Bedok East Logistics)',
-      lat: 1.324,
-      lng: 103.93,
-      temp: -2.1,
-      status: 'offline',
-    },
-    {
-      name: 'Truck-013',
-      route: 'Route-SG13 (Sengkang Regional Depot)',
-      lat: 1.39,
-      lng: 103.895,
-      temp: 5.3,
-      status: 'online',
-    },
-    {
-      name: 'Truck-014',
-      route: 'Route-SG14 (Bukit Batok West Link)',
-      lat: 1.348,
-      lng: 103.752,
-      temp: 4.4,
-      status: 'online',
-    },
-    {
-      name: 'Truck-015',
-      route: 'Route-SG15 (Loyang Supply Base)',
-      lat: 1.381,
-      lng: 103.978,
-      temp: 4.7,
-      status: 'online',
-    },
-    {
-      name: 'Truck-016',
-      route: 'Route-SG16 (Yishun Industrial Belt)',
-      lat: 1.43,
-      lng: 103.838,
-      temp: 5.0,
-      status: 'online',
-    },
-    {
-      name: 'Truck-017',
-      route: 'Route-SG17 (Kallang Logistics Zone)',
-      lat: 1.312,
-      lng: 103.865,
-      temp: 4.3,
-      status: 'online',
-    },
-    {
-      name: 'Truck-018',
-      route: 'Route-SG18 (Senoko Cold Supply)',
-      lat: 1.458,
-      lng: 103.808,
-      temp: 6.2,
-      status: 'pending',
-    },
-    {
-      name: 'Truck-019',
-      route: 'Route-SG19 (Boon Lay Freight Link)',
-      lat: 1.328,
-      lng: 103.705,
-      temp: 4.9,
-      status: 'online',
-    },
-    {
-      name: 'Truck-020',
-      route: 'Route-SG20 (Sungei Kadut Corridor)',
-      lat: 1.418,
-      lng: 103.748,
-      temp: 3.7,
-      status: 'online',
-    },
   ];
+
+  // Remove any extra vehicles outside of Truck-001 to Truck-005
+  const allowedNames = SEED_TRUCKS.map((t) => t.name);
+  const extraVehicles = await prisma.vehicle.findMany({
+    where: { name: { notIn: allowedNames } },
+  });
+  for (const extra of extraVehicles) {
+    await prisma.telemetryReading.deleteMany({ where: { vehicleId: extra.id } });
+    await prisma.alert.deleteMany({ where: { vehicleId: extra.id } });
+    await prisma.statusEvent.deleteMany({ where: { vehicleId: extra.id } });
+    await prisma.vehicle.delete({ where: { id: extra.id } });
+    console.log(`Cleaned up extra vehicle: ${extra.name}`);
+  }
 
   for (const t of SEED_TRUCKS) {
     let vehicle = await prisma.vehicle.findUnique({ where: { name: t.name } });

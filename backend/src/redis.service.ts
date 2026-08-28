@@ -12,13 +12,18 @@ export class RedisService implements OnModuleDestroy {
       lazyConnect: true,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
-      connectTimeout: 3000,
-      retryStrategy: () => null, // Stop endless reconnection loops
+      connectTimeout: 2000,
+      retryStrategy: () => null, // Stop endless reconnect loops when down
     });
 
     this.client.on('error', (err) => {
-      this.logger.warn(`Redis connection warning (non-fatal): ${err.message}`);
+      // Suppress unhandled error crashes
+      this.logger.debug(`Suppressed Redis connection error: ${err.message}`);
     });
+  }
+
+  isReady(): boolean {
+    return !!this.client && this.client.status === 'ready';
   }
 
   getClient(): Redis {

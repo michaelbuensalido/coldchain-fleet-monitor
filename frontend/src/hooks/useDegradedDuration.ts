@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { API_BASE } from '../config';
+import { API_BASE, getAuthToken } from '../config';
 
 interface StatusEvent {
   id: string;
@@ -18,7 +18,7 @@ async function fetchStatusEvents(vehicleId: string, token: string): Promise<Stat
 }
 
 export function useDegradedDuration(vehicleId: string | null, currentStatus: string) {
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
 
   return useQuery({
     queryKey: ['status-events', vehicleId],

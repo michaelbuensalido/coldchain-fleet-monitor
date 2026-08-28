@@ -40,10 +40,10 @@ const axios_1 = __importDefault(require("axios"));
 const child_process_1 = require("child_process");
 const path = __importStar(require("path"));
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
-const VEHICLE_COUNT = parseInt(process.env.VEHICLE_COUNT || '20', 10); // default to 20 vehicles (5 initial + 15 added)
+const FLEET_SIZE = Number(process.env.FLEET_SIZE || process.env.NUM_VEHICLES || process.env.VEHICLE_COUNT) || 5;
 const processes = [];
 async function startFleet() {
-    console.log(`Initializing fleet of ${VEHICLE_COUNT} simulated vehicles against ${BACKEND_URL}`);
+    console.log(`Initializing fleet of ${FLEET_SIZE} simulated vehicles against ${BACKEND_URL}`);
     try {
         // 1. Log in admin to provision vehicles and config profiles
         console.log('Logging in admin...');
@@ -63,8 +63,8 @@ async function startFleet() {
         }, { headers: authHeaders });
         const profile = configRes.data;
         console.log(`Created Config Profile: ${profile.id}`);
-        // 3. Register vehicles and start their processes
-        for (let i = 1; i <= VEHICLE_COUNT; i++) {
+        // 3. Register vehicles and start their processes (Truck-001 through Truck-005 by default)
+        for (let i = 1; i <= FLEET_SIZE; i++) {
             const name = `Truck-${String(i).padStart(3, '0')}`;
             console.log(`Registering vehicle: ${name}...`);
             const vRes = await axios_1.default.post(`${BACKEND_URL}/vehicles`, { name, currentRoute: `Route-SG${String(i).padStart(2, '0')}` }, { headers: authHeaders });

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { API_BASE } from '../config';
+import { API_BASE, getAuthToken } from '../config';
 
 interface Vehicle {
   id: string;
@@ -52,7 +52,7 @@ async function updateVehicle(token: string, id: string, data: { name?: string; c
 }
 
 export function useVehicles() {
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
   return useQuery({
     queryKey: ['vehicles'],
     queryFn: () => fetchVehicles(token),
@@ -63,7 +63,7 @@ export function useVehicles() {
 
 export function useCreateVehicle() {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
 
   return useMutation({
     mutationFn: (data: { name: string; currentRoute?: string }) => createVehicle(token, data),
@@ -75,7 +75,7 @@ export function useCreateVehicle() {
 
 export function useUpdateVehicle() {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: { name?: string; currentRoute?: string; active?: boolean } }) =>

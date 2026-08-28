@@ -5,7 +5,8 @@ import Redis from 'ioredis';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: true,
+    credentials: true,
   },
 })
 export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {

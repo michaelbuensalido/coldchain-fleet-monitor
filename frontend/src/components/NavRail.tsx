@@ -85,7 +85,7 @@ export default function NavRail({
       {activePanel !== null && activePanel !== "live" && (
         <div
           className="fixed inset-0 z-20 transition-opacity duration-200"
-          style={{ background: "var(--color-surface-scrim)", backdropFilter: "blur(2px)" }}
+          style={{ background: "var(--color-surface-scrim)" }}
           onClick={() => onPanelChange(null)}
         />
       )}
@@ -93,23 +93,20 @@ export default function NavRail({
       {/* Vertical Icon Rail */}
       <nav
         aria-label="Primary navigation rail"
-        className="fixed top-4 left-4 z-30 flex flex-col items-center py-5"
+        className="fixed top-0 left-0 z-30 flex flex-col items-center py-4"
         style={{
-          width: 72,
-          height: "calc(100vh - 2rem)",
-          background: "var(--color-surface-panel)",
-          border: "1px solid var(--color-border-quiet)",
-          backdropFilter: "blur(16px)",
-          borderRadius: 18,
-          boxShadow: "0 8px 32px oklch(0 0 0 / 0.5), 0 0 0 1px oklch(1 0 0 / 0.04)",
+          width: 60,
+          height: "100vh",
+          background: "var(--color-paper-1)",
+          borderRight: "1px solid var(--color-border-quiet)",
         }}
       >
         {/* Logo */}
         <button
           id="nav-logo-btn"
           onClick={() => onPanelChange(null)}
-          className="mb-5 rounded-xl overflow-hidden flex-shrink-0 transition-transform duration-150 active:scale-95 cursor-pointer"
-          style={{ width: 44, height: 44 }}
+          className="mb-4 overflow-hidden flex-shrink-0 transition-transform duration-150 active:scale-95 cursor-pointer"
+          style={{ width: 36, height: 36, borderRadius: 6 }}
           title="ColdChainIQ Fleet Monitor"
         >
           <img
@@ -119,8 +116,10 @@ export default function NavRail({
           />
         </button>
 
+        <div className="w-full h-px mb-4" style={{ background: "var(--color-border-quiet)" }} />
+
         {/* Nav buttons */}
-        <div className="flex-1 flex flex-col gap-2.5 items-center w-full px-2">
+        <div className="flex-1 flex flex-col gap-1 items-center w-full">
           {NAV_ITEMS.map(({ id, icon: Icon, label, title }) => {
             const active = isActive(id);
             return (
@@ -133,39 +132,29 @@ export default function NavRail({
                     : togglePanel(id as Exclude<NavRailPanel, "live" | null>)
                 }
                 title={title}
-                className="relative w-full rounded-xl flex flex-col items-center gap-1 cursor-pointer transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+                className="relative w-full flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2"
                 style={{
-                  padding: "10px 0",
-                  background: active
-                    ? "var(--color-accent-dim)"
-                    : "oklch(0.16 0.022 240 / 0.50)",
-                  border: active
-                    ? "1px solid var(--color-accent-edge)"
-                    : "1px solid var(--color-border-quiet)",
-                  color: active
-                    ? "var(--color-accent)"
-                    : "var(--color-text-dim)",
-                  boxShadow: active
-                    ? "0 0 14px var(--color-accent-glow), inset 3px 0 0 var(--color-accent)"
-                    : "none",
-                  transform: active ? "none" : undefined,
+                  height: 44,
+                  background: active ? "var(--color-accent-dim)" : "transparent",
+                  borderLeft: active ? "2px solid var(--color-accent)" : "2px solid transparent",
+                  color: active ? "var(--color-accent)" : "var(--color-text-dim)",
                   // @ts-ignore
                   "--tw-ring-color": "var(--color-focus)",
                 }}
               >
                 <div className="relative">
-                  <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />
+                  <Icon size={16} strokeWidth={active ? 2.2 : 1.8} />
                   {id === "alerts" && unacknowledgedAlerts > 0 && (
                     <span
-                      className="absolute flex items-center justify-center font-mono font-bold dot-online"
+                      className="absolute flex items-center justify-center font-mono font-bold"
                       style={{
-                        top: -6,
-                        right: -8,
-                        minWidth: 15,
-                        height: 15,
-                        padding: "0 3px",
-                        fontSize: 9,
-                        borderRadius: 8,
+                        top: -4,
+                        right: -6,
+                        minWidth: 14,
+                        height: 14,
+                        padding: "0 2px",
+                        fontSize: 8,
+                        borderRadius: 7,
                         background: "var(--color-status-offline)",
                         color: "var(--color-text-main)",
                         lineHeight: 1,
@@ -177,7 +166,7 @@ export default function NavRail({
                 </div>
                 <span
                   className="font-mono font-semibold tracking-widest uppercase"
-                  style={{ fontSize: 8 }}
+                  style={{ fontSize: 7, fontStyle: "normal" }}
                 >
                   {label}
                 </span>
@@ -191,32 +180,27 @@ export default function NavRail({
           id="nav-btn-logout"
           onClick={onLogout}
           title="Logout"
-          className="rounded-xl flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2"
+          className="w-full flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 mt-auto"
           style={{
-            width: 40,
-            height: 40,
-            background: "oklch(0.16 0.022 240 / 0.50)",
-            border: "1px solid var(--color-border-quiet)",
+            height: 44,
+            background: "transparent",
+            borderLeft: "2px solid transparent",
             color: "var(--color-text-muted)",
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background =
-              "oklch(0.62 0.22 25 / 0.10)";
-            (e.currentTarget as HTMLButtonElement).style.borderColor =
-              "oklch(0.62 0.22 25 / 0.30)";
-            (e.currentTarget as HTMLButtonElement).style.color =
-              "var(--color-status-offline)";
+            (e.currentTarget as HTMLButtonElement).style.color = "var(--color-status-offline)";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background =
-              "oklch(0.16 0.022 240 / 0.50)";
-            (e.currentTarget as HTMLButtonElement).style.borderColor =
-              "var(--color-border-quiet)";
-            (e.currentTarget as HTMLButtonElement).style.color =
-              "var(--color-text-muted)";
+            (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-muted)";
           }}
         >
-          <LogOut size={15} strokeWidth={1.8} />
+          <LogOut size={16} strokeWidth={1.8} />
+          <span
+            className="font-mono font-semibold tracking-widest uppercase"
+            style={{ fontSize: 7, fontStyle: "normal" }}
+          >
+            Logout
+          </span>
         </button>
       </nav>
 
@@ -229,15 +213,13 @@ export default function NavRail({
           className="fixed z-30 flex flex-col overflow-hidden panel-enter"
           style={{
             top: 16,
-            left: 96,
+            left: 60,
             width: 420,
             height: "calc(100vh - 2rem)",
             background: "var(--color-surface-panel)",
             border: "1px solid var(--color-border-quiet)",
-            backdropFilter: "blur(20px)",
-            borderRadius: 18,
-            boxShadow:
-              "0 8px 40px oklch(0 0 0 / 0.55), 0 0 0 1px oklch(1 0 0 / 0.04)",
+            borderTop: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-xl)",
           }}
         >
           {activePanel === "alerts" && (
