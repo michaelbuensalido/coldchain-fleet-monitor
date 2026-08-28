@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { Client, Message } from 'azure-iot-device';
+import { Mqtt } from 'azure-iot-device-mqtt';
 
 const VEHICLE_ID = process.argv[2];
 const API_KEY = process.argv[3];
@@ -7,6 +9,10 @@ const HEARTBEAT_INTERVAL = parseInt(process.argv[5] || '60', 10);
 const TEMP_MIN = parseFloat(process.argv[6] || '2.0');
 const TEMP_MAX = parseFloat(process.argv[7] || '8.0');
 
+const DEVICE_CONNECTION_STRING =
+  process.env.DEVICE_CONNECTION_STRING ||
+  process.env.IOT_HUB_DEVICE_CONNECTION_STRING;
+
 if (!VEHICLE_ID || !API_KEY) {
   console.error('Usage: ts-node vehicle.ts <vehicleId> <apiKey> [backendUrl] [intervalSecs] [tempMin] [tempMax]');
   process.exit(1);
@@ -14,6 +20,27 @@ if (!VEHICLE_ID || !API_KEY) {
 
 console.log(`Starting simulated vehicle ${VEHICLE_ID}`);
 console.log(`Config: URL=${BACKEND_URL}, Interval=${HEARTBEAT_INTERVAL}s, TempRange=[${TEMP_MIN}, ${TEMP_MAX}]`);
+if (DEVICE_CONNECTION_STRING) {
+  console.log(`Azure IoT Hub MQTT Publisher enabled for vehicle ${VEHICLE_ID}`);
+}
+
+let iotHubClient: Client | null = null;
+if (DEVICE_CONNECTION_STRING) {
+  try {
+    iotHubClient = Client.fromConnectionString(DEVICE_CONNECTION_STRING, Mqtt);
+    iotHubClient.open((err) => {
+      if (err) {
+        console.error(`[Vehicle ${VEHICLE_ID}] IoT Hub client connection error: ${err.message}`);
+        iotHubClient = null;
+      } else {
+        console.log(`[Vehicle ${VEHICLE_ID}] Connected to Azure IoT Hub via MQTT.`);
+      }
+    });
+  } catch (err: any) {
+    console.error(`[Vehicle ${VEHICLE_ID}] Failed to initialize IoT Hub client: ${err.message}`);
+    iotHubClient = null;
+  }
+}
 
 // Initial coordinates (around Singapore area)
 let latitude = 1.3521 + (Math.random() - 0.5) * 0.12;
@@ -69,24 +96,45 @@ async function sendTelemetry() {
   latitude += (Math.random() - 0.5) * 0.0015;
   longitude += (Math.random() - 0.5) * 0.0015;
 
-  try {
-    const payload = {
-      temperature: parseFloat(currentTemperature.toFixed(2)),
-      latitude: parseFloat(latitude.toFixed(6)),
-      longitude: parseFloat(longitude.toFixed(6)),
-      doorOpen,
-    };
+  const timestamp = new Date().toISOString();
+  const payload = {
+    vehicleId: VEHICLE_ID,
+    temperature: parseFloat(currentTemperature.toFixed(2)),
+    latitude: parseFloat(latitude.toFixed(6)),
+    longitude: parseFloat(longitude.toFixed(6)),
+    doorOpen,
+    timestamp,
+  };
 
-    console.log(`[Vehicle ${VEHICLE_ID}] Sending: Temp=${payload.temperature}°C, Door=${payload.doorOpen}, Pos=(${payload.latitude}, ${payload.longitude})`);
-    
-    await axios.post(`${BACKEND_URL}/telemetry`, payload, {
-      headers: {
-        'x-api-key': API_KEY,
-      },
-      timeout: 5000,
-    });
-  } catch (err: any) {
-    console.error(`[Vehicle ${VEHICLE_ID}] Telemetry send failed: ${err.message}`);
+  console.log(`[Vehicle ${VEHICLE_ID}] Telemetry Tick: Temp=${payload.temperature}°C, Door=${payload.doorOpen}, Pos=(${payload.latitude}, ${payload.longitude})`);
+
+  // Publish to Azure IoT Hub via MQTT if client is connected
+  if (iotHubClient) {
+    try {
+      const message = new Message(JSON.stringify(payload));
+      await new Promise<void>((resolve, reject) => {
+        iotHubClient!.sendEvent(message, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      console.log(`[Vehicle ${VEHICLE_ID}] Published telemetry to Azure IoT Hub via MQTT.`);
+    } catch (err: any) {
+      console.error(`[Vehicle ${VEHICLE_ID}] IoT Hub MQTT send failed: ${err.message}`);
+    }
+  } else {
+    // Fall back to direct HTTP POST endpoint
+    try {
+      await axios.post(`${BACKEND_URL}/telemetry`, payload, {
+        headers: {
+          'x-api-key': API_KEY,
+        },
+        timeout: 5000,
+      });
+      console.log(`[Vehicle ${VEHICLE_ID}] Posted telemetry via HTTP to backend.`);
+    } catch (err: any) {
+      console.error(`[Vehicle ${VEHICLE_ID}] HTTP Telemetry send failed: ${err.message}`);
+    }
   }
 
   scheduleNext();

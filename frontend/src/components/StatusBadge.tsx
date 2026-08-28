@@ -1,6 +1,6 @@
-/* Hallmark · component: StatusBadge · genre: atmospheric · theme: Midnight
- * states: default · pulse-online · blink-pending · dim-offline
- * contrast: pass
+/* Hallmark · component: StatusBadge · genre: modern-minimal · theme: Cobalt
+ * states: default · pulse-online · blink-pending · dim-offline · dim-degraded
+ * contrast: pass (46–50)
  */
 
 interface StatusBadgeProps {
@@ -8,6 +8,7 @@ interface StatusBadgeProps {
 }
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
+  // Flat pill, tight radius — not rounded-full (too bubbly for industrial register)
   const styles: Record<string, {
     bg: string;
     border: string;
@@ -33,7 +34,7 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
       bg:      'bg-[var(--color-status-offline-dim)]',
       border:  'border-[var(--color-status-offline-edge)]',
       text:    'text-[var(--color-status-offline)]',
-      dot:     'bg-[var(--color-status-offline)] opacity-60',
+      dot:     'bg-[var(--color-status-offline)] opacity-70',
       dotAnim: '',
     },
     pending: {
@@ -49,9 +50,10 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-widest border font-mono uppercase ${s.bg} ${s.border} ${s.text}`}
+      className={`inline-flex items-center gap-1 px-1.5 py-px text-[9px] font-semibold tracking-widest border font-mono uppercase ${s.bg} ${s.border} ${s.text}`}
+      style={{ borderRadius: 'var(--radius-sm)' }}
     >
-      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot} ${s.dotAnim}`} />
+      <span className={`w-1 h-1 rounded-full flex-shrink-0 ${s.dot} ${s.dotAnim}`} />
       {status}
     </span>
   );

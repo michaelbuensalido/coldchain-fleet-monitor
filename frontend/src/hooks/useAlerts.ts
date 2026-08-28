@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { API_BASE } from '../config';
+import { API_BASE, getAuthToken } from '../config';
 
 interface Alert {
   id: string;
@@ -47,7 +47,7 @@ async function acknowledgeAlert(token: string, alertId: string, acknowledgedBy: 
 }
 
 export function useAlerts() {
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
   return useQuery({
     queryKey: ['alerts'],
     queryFn: () => fetchAlerts(token),
@@ -57,7 +57,7 @@ export function useAlerts() {
 }
 
 export function useUnacknowledgedAlerts() {
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
   return useQuery({
     queryKey: ['alerts', 'unacknowledged'],
     queryFn: () => fetchUnacknowledgedAlerts(token),
@@ -77,7 +77,7 @@ function markAcknowledged(alert: Alert): Alert {
 
 export function useAcknowledgeAlert() {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
 
   return useMutation({
     mutationFn: (alertId: string) => acknowledgeAlert(token, alertId, 'admin'),
@@ -125,7 +125,7 @@ async function acknowledgeAllAlerts(token: string, acknowledgedBy: string): Prom
 
 export function useAcknowledgeAllAlerts() {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
 
   return useMutation({
     mutationFn: () => acknowledgeAllAlerts(token, 'admin'),

@@ -29,14 +29,18 @@ export class HealthSweepService implements OnModuleInit, OnModuleDestroy {
 
   async runSweep() {
     try {
+      const redisClient = this.redis.getClient();
+      if (!redisClient || redisClient.status !== 'ready') {
+        // Ignore sweeps if Redis is not connected / ready
+        return;
+      }
+
       const vehicles = await this.prisma.vehicle.findMany({
         include: {
           configProfile: true,
           telemetry: { orderBy: { timestamp: 'desc' }, take: 1 },
         },
       });
-
-      const redisClient = this.redis.getClient();
 
       for (const vehicle of vehicles) {
         if (vehicle.status === 'pending') {
@@ -246,14 +250,13 @@ export class HealthSweepService implements OnModuleInit, OnModuleDestroy {
               reason,
               durationSeconds,
               minor: isMinor,
-              timestamp: new Date().toISOString(),
             }),
           );
         }
       }
     } catch (err: any) {
-      console.error(
-        '[Health Sweep] Sweep error:',
+      console.warn(
+        '[Health Sweep] Health sweep warning (non-fatal):',
         err?.message || 'Unknown error',
       );
     }

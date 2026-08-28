@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { API_BASE } from '../config';
+import { API_BASE, getAuthToken } from '../config';
 
 interface TelemetryReading {
   id: string;
@@ -20,7 +20,7 @@ async function fetchTelemetryHistory(token: string, vehicleId: string, limit = 1
 }
 
 export function useTelemetryHistory(vehicleId: string, limit = 100) {
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
   return useQuery({
     queryKey: ['telemetry', vehicleId, limit],
     queryFn: () => fetchTelemetryHistory(token, vehicleId, limit),

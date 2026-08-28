@@ -4,9 +4,13 @@
     "start": "node dist/fleet-runner.js",
     "start:vehicle": "node dist/vehicle.js"
   },
+  "dependencies": {
+    "axios": "^1.19.0",
+    "azure-iot-device": "^1.18.4",
+    "azure-iot-device-mqtt": "^1.16.4"
+  },
   "devDependencies": {
     "@types/node": "^26.2.0",
-    "axios": "^1.19.0",
     "dotenv": "^17.4.2",
     "ts-node": "^10.9.2",
     "typescript": "^7.0.2"

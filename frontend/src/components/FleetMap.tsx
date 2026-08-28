@@ -81,7 +81,7 @@ const createCustomIcon = (
           : ""
       }
       <!-- Outer base ring -->
-      <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${(centerSize + borderSize * 2) / 2}" fill="#0b0f17" stroke="${color}" stroke-width="${borderSize}" filter="url(#glow-${status}-${isSelected ? "sel" : "unsel"})"/>
+      <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${(centerSize + borderSize * 2) / 2}" fill="#0c0f16" stroke="${color}" stroke-width="${borderSize}" filter="url(#glow-${status}-${isSelected ? "sel" : "unsel"})"/>
       <!-- Inner solid dot -->
       <circle cx="${ringSize / 2}" cy="${ringSize / 2}" r="${centerSize / 2}" fill="${color}"/>
     </svg>
@@ -95,18 +95,16 @@ const createCustomIcon = (
         left: 50%;
         transform: translateX(-50%);
         margin-bottom: 3px;
-        background: rgba(11, 15, 23, 0.85);
-        border: 1px solid ${isSelected ? color : "rgba(30, 41, 59, 0.8)"};
-        border-radius: 6px;
-        padding: 1.5px 6px;
-        color: ${isSelected ? "#ffffff" : "#cbd5e1"};
+        background: rgba(12, 15, 22, 0.92);
+        border: 1px solid ${isSelected ? color : "rgba(38, 42, 60, 0.85)"};
+        border-radius: 4px;
+        padding: 2px 6px;
+        color: ${isSelected ? "#edf2f8" : "#8892a4"};
         font-size: 10px;
-        font-family: var(--font-mono, monospace);
-        font-weight: 600;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-weight: 500;
         white-space: nowrap;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 6px ${color}33;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
         letter-spacing: 0.02em;
         pointer-events: auto;
         cursor: pointer;
@@ -598,8 +596,9 @@ function MapInner({
   return (
     <>
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        maxZoom={19}
       />
       <MapController
         selectedVehicle={selectedVehicle ?? null}

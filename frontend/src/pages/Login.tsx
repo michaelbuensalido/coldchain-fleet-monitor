@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import WelcomeShader from "../components/WelcomeShader";
-import { API_BASE } from "../config";
+import { API_BASE, storeAuthToken } from "../config";
 
 interface LoginResponse {
-  access_token: string;
+  access_token?: string;
+  token?: string;
 }
 
 async function login(email: string, password: string): Promise<LoginResponse> {
   const response = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
     body: JSON.stringify({ email, password }),
   });
   if (!response.ok) throw new Error("Login failed");
@@ -33,7 +36,7 @@ export default function Login() {
   const loginMutation = useMutation({
     mutationFn: () => login(email, password),
     onSuccess: (data) => {
-      localStorage.setItem("token", data.access_token);
+      storeAuthToken(data as Record<string, string>);
       if (rememberMe) {
         localStorage.setItem("rememberedEmail", email);
       } else {
@@ -48,15 +51,11 @@ export default function Login() {
     loginMutation.mutate();
   };
 
-  /* Shared input style factory */
-  const inputStyle = (
-    focused: boolean,
-    hasError: boolean,
-  ): React.CSSProperties => ({
+  const inputStyle = (focused: boolean, hasError: boolean): React.CSSProperties => ({
     width: "100%",
-    padding: "11px 14px",
-    fontFamily: "var(--font-display)",
-    fontSize: 14,
+    padding: "9px 12px",
+    fontFamily: "var(--font-data)",
+    fontSize: 13,
     color: "var(--color-text-main)",
     background: "var(--color-paper-2)",
     border: `1px solid ${
@@ -66,287 +65,425 @@ export default function Login() {
           ? "var(--color-accent-edge)"
           : "var(--color-border)"
     }`,
-    borderRadius: 10,
+    borderRadius: "var(--radius-md)",
     outline: "none",
-    transition: "border-color 150ms ease, box-shadow 150ms ease",
+    transition: "border-color 120ms ease",
     boxShadow: focused
-      ? `0 0 0 3px ${hasError ? "oklch(0.62 0.22 25 / 0.15)" : "var(--color-accent-glow)"}`
+      ? `0 0 0 3px ${hasError ? "oklch(0.62 0.21 25 / 0.12)" : "var(--color-accent-glow)"}`
       : "none",
   });
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center p-4"
       style={{
+        minHeight: "100vh",
         background: "var(--color-paper)",
         fontFamily: "var(--font-display)",
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
       }}
     >
+      {/* Left — Brand / System identity ───────────────────────── */}
       <div
-        className="w-full overflow-hidden"
         style={{
-          maxWidth: 960,
-          borderRadius: 20,
-          border: "1px solid var(--color-border)",
-          background: "var(--color-paper-1)",
-          boxShadow:
-            "0 24px 64px oklch(0 0 0 / 0.65), 0 0 0 1px oklch(1 0 0 / 0.04)",
+          borderRight: "1px solid var(--color-border-quiet)",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "48px 56px",
         }}
       >
-        <div className="grid md:grid-cols-2" style={{ minHeight: 560 }}>
-          {/* ── Left panel (brand) ──────────────────────────────── */}
-          <div
-            className="relative flex flex-col items-center justify-center overflow-hidden"
+        {/* Wordmark */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <img
+            src="/logo.png"
+            alt="ColdChainIQ"
             style={{
-              minHeight: 280,
-              padding: "48px 40px",
-              background: "var(--color-paper)",
-              borderRight: "1px solid var(--color-border-quiet)",
+              width: 36,
+              height: 36,
+              borderRadius: "var(--radius-sm)",
+              objectFit: "cover",
             }}
-          >
-            <WelcomeShader />
-
-            <div className="relative z-10 flex flex-col items-center gap-5 text-center">
-              {/* Logo */}
-              <div
-                className="flex items-center justify-center overflow-hidden"
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: 18,
-                  border: "1px solid var(--color-accent-edge)",
-                  background: "var(--color-paper-2)",
-                  boxShadow:
-                    "0 8px 24px oklch(0 0 0 / 0.50), 0 0 20px var(--color-accent-glow)",
-                }}
-              >
-                <img
-                  src="/logo.png"
-                  alt="ColdChainIQ Logo"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {/* Wordmark */}
-              <div className="space-y-1">
-                <p
-                  className="font-mono font-semibold uppercase tracking-[0.20em]"
-                  style={{ fontSize: 10, color: "var(--color-accent)" }}
-                >
-                  Fleet Monitor
-                </p>
-                <h1
-                  className="font-sans font-bold leading-tight"
-                  style={{
-                    fontSize: 30,
-                    color: "var(--color-text-main)",
-                    fontStyle: "normal",
-                  }}
-                >
-                  ColdChainIQ
-                </h1>
-                <p
-                  className="font-sans font-light leading-relaxed"
-                  style={{
-                    fontSize: 14,
-                    color: "var(--color-text-dim)",
-                    maxWidth: 240,
-                  }}
-                >
-                  Real-time cold-chain visibility across your entire fleet.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Right panel (form) ──────────────────────────────── */}
-          <div
-            className="flex flex-col justify-center"
-            style={{ padding: "48px 40px", background: "var(--color-paper-1)" }}
-          >
-            <div style={{ maxWidth: 340, width: "100%", margin: "0 auto" }}>
-              {/* Form header */}
-              <div className="mb-8 space-y-1">
-                <h2
-                  className="font-sans font-bold"
-                  style={{
-                    fontSize: 22,
-                    color: "var(--color-text-main)",
-                    fontStyle: "normal",
-                  }}
-                >
-                  Welcome back
-                </h2>
-                <p
-                  className="font-sans"
-                  style={{ fontSize: 13, color: "var(--color-text-dim)" }}
-                >
-                  Sign in to access your fleet dashboard.
-                </p>
-              </div>
-
-              {/* Error banner */}
-              {loginMutation.isError && (
-                <div
-                  className="mb-5 flex items-center gap-2 font-sans text-sm"
-                  style={{
-                    padding: "10px 14px",
-                    borderRadius: 10,
-                    background: "oklch(0.62 0.22 25 / 0.10)",
-                    border: "1px solid var(--color-status-offline-edge)",
-                    borderLeft: "3px solid var(--color-status-offline)",
-                    color: "var(--color-status-offline)",
-                  }}
-                >
-                  Invalid credentials — please try again.
-                </div>
-              )}
-
-              <form className="space-y-5" onSubmit={handleSubmit}>
-                {/* Email */}
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="login-email"
-                    className="font-sans font-medium"
-                    style={{
-                      fontSize: 12,
-                      color: "var(--color-text-dim)",
-                      display: "block",
-                    }}
-                  >
-                    Email Address
-                  </label>
-                  <input
-                    id="login-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    autoComplete="email"
-                    onFocus={() => setEmailFocus(true)}
-                    onBlur={() => setEmailFocus(false)}
-                    style={inputStyle(emailFocus, loginMutation.isError)}
-                  />
-                </div>
-
-                {/* Password */}
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="login-password"
-                    className="font-sans font-medium"
-                    style={{
-                      fontSize: 12,
-                      color: "var(--color-text-dim)",
-                      display: "block",
-                    }}
-                  >
-                    Password
-                  </label>
-                  <input
-                    id="login-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    autoComplete="current-password"
-                    onFocus={() => setPasswordFocus(true)}
-                    onBlur={() => setPasswordFocus(false)}
-                    style={inputStyle(passwordFocus, loginMutation.isError)}
-                  />
-                </div>
-
-                {/* Remember / Forgot */}
-                <div className="flex items-center justify-between">
-                  <label
-                    className="flex items-center gap-2 cursor-pointer select-none font-sans"
-                    style={{ fontSize: 13, color: "var(--color-text-dim)" }}
-                  >
-                    <input
-                      type="checkbox"
-                      id="login-remember"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded focus-visible:outline-none focus-visible:ring-2"
-                      style={{
-                        width: 15,
-                        height: 15,
-                        accentColor: "var(--color-accent)",
-                        // @ts-ignore
-                        "--tw-ring-color": "var(--color-focus)",
-                      }}
-                    />
-                    <span>Remember me</span>
-                  </label>
-                  <span
-                    className="font-sans cursor-default"
-                    style={{ fontSize: 13, color: "var(--color-accent)" }}
-                  >
-                    Forgot password?
-                  </span>
-                </div>
-
-                {/* Submit */}
-                <button
-                  id="login-submit-btn"
-                  type="submit"
-                  disabled={loginMutation.isPending}
-                  className="w-full font-sans font-semibold cursor-pointer transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50"
-                  style={{
-                    padding: "12px",
-                    fontSize: 14,
-                    borderRadius: 10,
-                    border: "1px solid var(--color-accent-edge)",
-                    background: loginMutation.isPending
-                      ? "var(--color-accent-dim)"
-                      : "var(--color-accent)",
-                    color: loginMutation.isPending
-                      ? "var(--color-accent)"
-                      : "oklch(0.10 0.018 240)",
-                    boxShadow: loginMutation.isPending
-                      ? "none"
-                      : "0 4px 14px var(--color-accent-glow)",
-                    // @ts-ignore
-                    "--tw-ring-color": "var(--color-focus)",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!loginMutation.isPending) {
-                      (e.currentTarget as HTMLButtonElement).style.transform =
-                        "translateY(-1px)";
-                      (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                        "0 6px 20px var(--color-accent-glow)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.transform =
-                      "none";
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                      loginMutation.isPending
-                        ? "none"
-                        : "0 4px 14px var(--color-accent-glow)";
-                  }}
-                >
-                  {loginMutation.isPending ? "Signing in…" : "Sign In"}
-                </button>
-              </form>
-
-              {/* Footer */}
-              <p
-                className="mt-6 text-center font-sans"
-                style={{ fontSize: 13, color: "var(--color-text-muted)" }}
-              >
-                Don&apos;t have an account?{" "}
-                <span
-                  className="cursor-default"
-                  style={{ color: "var(--color-accent)" }}
-                >
-                  Contact your administrator
-                </span>
-              </p>
-            </div>
+          />
+          <div>
+            <p
+              style={{
+                fontFamily: "var(--font-data)",
+                fontSize: 9,
+                color: "var(--color-text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.22em",
+                margin: 0,
+              }}
+            >
+              Fleet Monitor
+            </p>
+            <h1
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 16,
+                fontWeight: 600,
+                color: "var(--color-text-main)",
+                margin: 0,
+                fontStyle: "normal",
+              }}
+            >
+              ColdChainIQ
+            </h1>
           </div>
         </div>
+
+        {/* Central statement — not a hero, just calibrated text */}
+        <div>
+          <p
+            style={{
+              fontFamily: "var(--font-data)",
+              fontSize: 10,
+              color: "var(--color-accent)",
+              textTransform: "uppercase",
+              letterSpacing: "0.20em",
+              marginBottom: 16,
+            }}
+          >
+            Real-time cold-chain visibility
+          </p>
+          <h2
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 32,
+              fontWeight: 600,
+              color: "var(--color-text-main)",
+              lineHeight: 1.2,
+              fontStyle: "normal",
+              maxWidth: 320,
+            }}
+          >
+            Fleet intelligence for logistics operators
+          </h2>
+          <p
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 14,
+              color: "var(--color-text-dim)",
+              marginTop: 16,
+              maxWidth: 340,
+              lineHeight: 1.6,
+            }}
+          >
+            Monitor temperature, status, and location across every truck in your fleet — in one view.
+          </p>
+
+          {/* Stat row — real numbers only */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 1,
+              marginTop: 40,
+              background: "var(--color-border-quiet)",
+              border: "1px solid var(--color-border-quiet)",
+              borderRadius: "var(--radius-md)",
+              overflow: "hidden",
+            }}
+          >
+            {[
+              { value: "20",  label: "Active Trucks" },
+              { value: "10s", label: "Heartbeat Interval" },
+              { value: "24h", label: "Data Retention" },
+            ].map(({ value, label }) => (
+              <div
+                key={label}
+                style={{
+                  background: "var(--color-paper-1)",
+                  padding: "14px 16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--font-data)",
+                    fontSize: 22,
+                    fontWeight: 600,
+                    color: "var(--color-text-main)",
+                  }}
+                >
+                  {value}
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-data)",
+                    fontSize: 9,
+                    color: "var(--color-text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.14em",
+                  }}
+                >
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer label */}
+        <p
+          style={{
+            fontFamily: "var(--font-data)",
+            fontSize: 10,
+            color: "var(--color-text-muted)",
+          }}
+        >
+          Cold-chain logistics management system
+        </p>
+      </div>
+
+      {/* Right — Login form ─────────────────────────────────────── */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          padding: "48px 56px",
+          maxWidth: 480,
+          width: "100%",
+          margin: "0 auto",
+        }}
+      >
+        <div style={{ marginBottom: 32 }}>
+          <p
+            style={{
+              fontFamily: "var(--font-data)",
+              fontSize: 9,
+              color: "var(--color-text-muted)",
+              textTransform: "uppercase",
+              letterSpacing: "0.22em",
+              marginBottom: 8,
+            }}
+          >
+            Operator sign-in
+          </p>
+          <h2
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 22,
+              fontWeight: 600,
+              color: "var(--color-text-main)",
+              fontStyle: "normal",
+              margin: 0,
+            }}
+          >
+            Welcome back
+          </h2>
+          <p
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 13,
+              color: "var(--color-text-dim)",
+              marginTop: 6,
+            }}
+          >
+            Sign in to access your fleet dashboard.
+          </p>
+        </div>
+
+        {/* Error banner */}
+        {loginMutation.isError && (
+          <div
+            style={{
+              marginBottom: 20,
+              padding: "9px 12px",
+              borderRadius: "var(--radius-md)",
+              background: "var(--color-status-offline-dim)",
+              border: "1px solid var(--color-status-offline-edge)",
+              color: "var(--color-status-offline)",
+              fontFamily: "var(--font-data)",
+              fontSize: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span>✕</span>
+            Invalid credentials — please try again.
+          </div>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: 16 }}
+        >
+          {/* Email */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label
+              htmlFor="login-email"
+              style={{
+                fontFamily: "var(--font-data)",
+                fontSize: 10,
+                color: "var(--color-text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+              }}
+            >
+              Email Address
+            </label>
+            <input
+              id="login-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@coldchain.com"
+              required
+              autoComplete="email"
+              onFocus={() => setEmailFocus(true)}
+              onBlur={() => setEmailFocus(false)}
+              style={inputStyle(emailFocus, !!loginMutation.isError)}
+            />
+          </div>
+
+          {/* Password */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label
+              htmlFor="login-password"
+              style={{
+                fontFamily: "var(--font-data)",
+                fontSize: 10,
+                color: "var(--color-text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+              }}
+            >
+              Password
+            </label>
+            <input
+              id="login-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••••"
+              required
+              autoComplete="current-password"
+              onFocus={() => setPasswordFocus(true)}
+              onBlur={() => setPasswordFocus(false)}
+              style={inputStyle(passwordFocus, !!loginMutation.isError)}
+            />
+          </div>
+
+          {/* Remember me */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              id="login-remember"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              style={{
+                width: 13,
+                height: 13,
+                accentColor: "var(--color-accent)",
+              }}
+            />
+            <label
+              htmlFor="login-remember"
+              style={{
+                fontFamily: "var(--font-data)",
+                fontSize: 11,
+                color: "var(--color-text-muted)",
+                cursor: "pointer",
+              }}
+            >
+              Remember this device
+            </label>
+          </div>
+
+          {/* Submit */}
+          <button
+            id="login-submit-btn"
+            type="submit"
+            disabled={loginMutation.isPending}
+            style={{
+              marginTop: 8,
+              padding: "10px 16px",
+              fontFamily: "var(--font-display)",
+              fontSize: 13,
+              fontWeight: 600,
+              borderRadius: "var(--radius-md)",
+              border: "1px solid var(--color-accent-edge)",
+              background: loginMutation.isPending
+                ? "var(--color-accent-dim)"
+                : "var(--color-accent)",
+              color: loginMutation.isPending
+                ? "var(--color-accent)"
+                : "oklch(0.08 0.010 255)",
+              cursor: loginMutation.isPending ? "wait" : "pointer",
+              transition: "background 120ms ease, box-shadow 120ms ease",
+              boxShadow: loginMutation.isPending ? "none" : "0 2px 12px var(--color-accent-glow)",
+              outline: "none",
+            }}
+            onMouseEnter={(e) => {
+              if (!loginMutation.isPending) {
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--color-accent-hover)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loginMutation.isPending) {
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--color-accent)";
+              }
+            }}
+          >
+            {loginMutation.isPending ? "Signing in…" : "Sign In"}
+          </button>
+        </form>
+
+        <div
+          style={{
+            marginTop: 24,
+            padding: "10px 12px",
+            borderRadius: "var(--radius-md)",
+            background: "var(--color-paper-2)",
+            border: "1px solid var(--color-border-quiet)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ fontFamily: "var(--font-data)", fontSize: 11, color: "var(--color-text-dim)" }}>
+            <span style={{ color: "var(--color-accent)", fontWeight: 600 }}>Default Admin:</span> admin@coldchain.com / adminpassword
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEmail("admin@coldchain.com");
+              setPassword("adminpassword");
+            }}
+            style={{
+              padding: "4px 8px",
+              fontFamily: "var(--font-data)",
+              fontSize: 10,
+              color: "var(--color-accent)",
+              background: "var(--color-accent-dim)",
+              border: "1px solid var(--color-accent-edge)",
+              borderRadius: "var(--radius-sm)",
+              cursor: "pointer",
+            }}
+          >
+            Auto-fill
+          </button>
+        </div>
+
+        <p
+          style={{
+            marginTop: 20,
+            fontFamily: "var(--font-data)",
+            fontSize: 11,
+            color: "var(--color-text-muted)",
+          }}
+        >
+          No account?{" "}
+          <span style={{ color: "var(--color-accent)" }}>
+            Contact your administrator
+          </span>
+        </p>
       </div>
     </div>
   );

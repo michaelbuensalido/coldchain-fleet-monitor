@@ -10,8 +10,7 @@ export default function FleetOverview() {
   useSocket();
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
+    navigate('/fleet');
   };
 
   if (isLoading) return <div className="p-8">Loading fleet...</div>;

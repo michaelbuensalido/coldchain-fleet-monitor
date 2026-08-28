@@ -43,18 +43,19 @@ export default function Dashboard() {
 
   // Initialize degradedSinceMap for vehicles already in degraded state
   useEffect(() => {
-    if (vehicles) {
+    if (!vehicles) return;
+    setDegradedSinceMap((prev) => {
       const now = Date.now();
-      const initialMap: Record<string, number> = {};
+      let hasChanges = false;
+      const nextMap = { ...prev };
       vehicles.forEach((vehicle) => {
-        if (vehicle.status === 'degraded' && !degradedSinceMap[vehicle.id]) {
-          initialMap[vehicle.id] = now - 300000;
+        if (vehicle.status === 'degraded' && !nextMap[vehicle.id]) {
+          nextMap[vehicle.id] = now - 300000;
+          hasChanges = true;
         }
       });
-      if (Object.keys(initialMap).length > 0) {
-        setDegradedSinceMap((prev) => ({ ...prev, ...initialMap }));
-      }
-    }
+      return hasChanges ? nextMap : prev;
+    });
   }, [vehicles]);
 
   const selectedVehicle = vehicles?.find((v) => v.id === selectedVehicleId);
@@ -76,29 +77,30 @@ export default function Dashboard() {
       const nextStatus = socketStatus.toStatus || socketStatus.status;
       if (!nextStatus) return;
 
+      const vehicleId = socketStatus.vehicleId;
+
       setLiveStatusMap((prev) => ({
         ...prev,
-        [socketStatus.vehicleId]: nextStatus,
+        [vehicleId]: nextStatus,
       }));
 
-      // Track when vehicle enters degraded state
-      if (nextStatus === 'degraded' && !degradedSinceMap[socketStatus.vehicleId]) {
-        setDegradedSinceMap((prev) => ({
-          ...prev,
-          [socketStatus.vehicleId]: Date.now(),
-        }));
-      }
-
-      // Clear degraded timestamp when vehicle recovers
-      if (nextStatus !== 'degraded') {
-        setDegradedSinceMap((prev) => {
-          const next = { ...prev };
-          delete next[socketStatus.vehicleId];
-          return next;
-        });
-      }
+      setDegradedSinceMap((prev) => {
+        if (nextStatus === 'degraded') {
+          if (!prev[vehicleId]) {
+            return { ...prev, [vehicleId]: Date.now() };
+          }
+          return prev;
+        } else {
+          if (prev[vehicleId]) {
+            const next = { ...prev };
+            delete next[vehicleId];
+            return next;
+          }
+          return prev;
+        }
+      });
     }
-  }, [socketStatus, degradedSinceMap]);
+  }, [socketStatus]);
 
   // Get latest telemetry for all vehicles to add location data
   const vehiclesWithLocation: VehicleWithLocation[] = useMemo(() => {
@@ -147,8 +149,7 @@ export default function Dashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
+    navigate('/fleet');
   };
 
   const filteredVehicles = vehiclesWithLocation.filter((vehicle) => {

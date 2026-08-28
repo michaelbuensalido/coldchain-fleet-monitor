@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { API_BASE } from '../config';
+import { API_BASE, getAuthToken } from '../config';
 
 export interface StatusEvent {
   id: string;
@@ -76,7 +76,7 @@ async function acknowledgeEvent(token: string, eventId: string): Promise<StatusE
 }
 
 export function useEvents(filters: EventsFilters) {
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
   return useQuery({
     queryKey: ['events', filters],
     queryFn: () => fetchEvents(token, filters),
@@ -87,7 +87,7 @@ export function useEvents(filters: EventsFilters) {
 
 export function useAcknowledgeEvent() {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
 
   return useMutation({
     mutationFn: (eventId: string) => acknowledgeEvent(token, eventId),

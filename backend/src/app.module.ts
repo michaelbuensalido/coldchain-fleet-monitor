@@ -9,6 +9,7 @@ import { TelemetryModule } from './telemetry/telemetry.module';
 import { HealthModule } from './health/health.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { IotHubModule } from './iothub/iothub.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -24,6 +25,7 @@ import { AppService } from './app.service';
     HealthModule,
     RealtimeModule,
     AlertsModule,
+    IotHubModule,
   ],
   controllers: [AppController],
   providers: [AppService],

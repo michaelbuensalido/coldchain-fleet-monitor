@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { API_BASE } from '../config';
+import { API_BASE, getAuthToken } from '../config';
 
 interface ConfigProfile {
   id: string;
@@ -43,7 +43,7 @@ async function assignConfig(token: string, vehicleId: string, configProfileId: s
 }
 
 export function useConfigs() {
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
   return useQuery({
     queryKey: ['configs'],
     queryFn: () => fetchConfigs(token),
@@ -53,7 +53,7 @@ export function useConfigs() {
 
 export function useCreateConfig() {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
 
   return useMutation({
     mutationFn: (data: Omit<ConfigProfile, 'id'>) => createConfig(token, data),
@@ -65,7 +65,7 @@ export function useCreateConfig() {
 
 export function useAssignConfig() {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem('token') || '';
+  const token = getAuthToken();
 
   return useMutation({
     mutationFn: ({ vehicleId, configProfileId }: { vehicleId: string; configProfileId: string }) =>
